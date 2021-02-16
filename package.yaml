@@ -50,11 +50,13 @@ default-extensions:
 - DeriveFunctor
 - DeriveGeneric
 - DeriveTraversable
+- DerivingStrategies
 - DuplicateRecordFields
 - EmptyDataDeriving
 - FlexibleContexts
 - FlexibleInstances
 - GADTs
+- GeneralizedNewtypeDeriving
 - LambdaCase
 - MultiParamTypeClasses
 - NoImplicitPrelude

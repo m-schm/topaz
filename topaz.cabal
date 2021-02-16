@@ -33,7 +33,7 @@ library
       Paths_topaz
   hs-source-dirs:
       src
-  default-extensions: AllowAmbiguousTypes ApplicativeDo BangPatterns BlockArguments ConstraintKinds DataKinds DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DuplicateRecordFields EmptyDataDeriving FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses NoImplicitPrelude OverloadedLabels OverloadedLists OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TupleSections TypeApplications TypeFamilies UnicodeSyntax
+  default-extensions: AllowAmbiguousTypes ApplicativeDo BangPatterns BlockArguments ConstraintKinds DataKinds DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DerivingStrategies DuplicateRecordFields EmptyDataDeriving FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude OverloadedLabels OverloadedLists OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TupleSections TypeApplications TypeFamilies UnicodeSyntax
   build-depends:
       array
     , base
@@ -59,7 +59,7 @@ executable topaz-exe
       Paths_topaz
   hs-source-dirs:
       app
-  default-extensions: AllowAmbiguousTypes ApplicativeDo BangPatterns BlockArguments ConstraintKinds DataKinds DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DuplicateRecordFields EmptyDataDeriving FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses NoImplicitPrelude OverloadedLabels OverloadedLists OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TupleSections TypeApplications TypeFamilies UnicodeSyntax
+  default-extensions: AllowAmbiguousTypes ApplicativeDo BangPatterns BlockArguments ConstraintKinds DataKinds DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DerivingStrategies DuplicateRecordFields EmptyDataDeriving FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude OverloadedLabels OverloadedLists OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TupleSections TypeApplications TypeFamilies UnicodeSyntax
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
   build-depends:
       array
@@ -88,7 +88,7 @@ test-suite topaz-test
       Paths_topaz
   hs-source-dirs:
       test
-  default-extensions: AllowAmbiguousTypes ApplicativeDo BangPatterns BlockArguments ConstraintKinds DataKinds DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DuplicateRecordFields EmptyDataDeriving FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses NoImplicitPrelude OverloadedLabels OverloadedLists OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TupleSections TypeApplications TypeFamilies UnicodeSyntax
+  default-extensions: AllowAmbiguousTypes ApplicativeDo BangPatterns BlockArguments ConstraintKinds DataKinds DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DerivingStrategies DuplicateRecordFields EmptyDataDeriving FlexibleContexts FlexibleInstances GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses NoImplicitPrelude OverloadedLabels OverloadedLists OverloadedStrings RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TupleSections TypeApplications TypeFamilies UnicodeSyntax
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       array
