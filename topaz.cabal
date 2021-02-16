@@ -45,6 +45,7 @@ library
     , generic-lens
     , lens
     , megaparsec
+    , multiplate
     , parser-combinators
     , recursion-schemes
     , relude
@@ -72,6 +73,7 @@ executable topaz-exe
     , generic-lens
     , lens
     , megaparsec
+    , multiplate
     , parser-combinators
     , recursion-schemes
     , relude
@@ -101,6 +103,7 @@ test-suite topaz-test
     , generic-lens
     , lens
     , megaparsec
+    , multiplate
     , parser-combinators
     , recursion-schemes
     , relude

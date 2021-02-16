@@ -5,12 +5,34 @@ import Control.Lens
 import Language.Topaz.Types
 
 import Text.Megaparsec (SourcePos)
-import Control.Comonad.Cofree (Cofree)
+import Control.Comonad.Cofree (Cofree, _unwrap)
 import Text.Show
 import Data.Functor.Classes
 import Text.Show.Deriving (makeLiftShowsPrec)
 import Data.Functor.Foldable
 import qualified Control.Comonad.Trans.Cofree as F
+
+import Data.Generics.Multiplate
+
+data Plate n f = Plate
+  { p_expr  ∷ Expr n → f (Expr n)
+  , p_block ∷ Block n → f (Block n)
+  , p_decl  ∷ Decl n Block → f (Decl n Block)
+  }
+
+instance Multiplate (Plate n) where
+  multiplate Plate{..} = Plate buildExpr buildBlock buildDecl where
+    buildExpr = _unwrap %%~ \case
+      f :$ x → liftA2 (:$) (p_expr f) (p_expr x)
+      f :$@ x → liftA2 (:$@) (p_expr f) (p_expr x)
+      Lam as ret b → liftA2 (Lam as) (p_expr ret) (loc %%~ p_block $ b)
+      etc → pure etc
+    buildBlock (Block ds e) = Block <$> traverse p_decl ds <*> p_expr e
+    buildDecl = \case
+      DImport s i → pure (DImport s i)
+      DBind s sc i as ret b → DBind s sc i as <$> p_expr ret <*> p_block b
+
+  mkPlate ret = Plate (ret p_expr) (ret p_block) (ret p_decl)
 
 data Span = Span SourcePos SourcePos
 

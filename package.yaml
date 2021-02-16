@@ -29,6 +29,7 @@ dependencies:
 - generic-lens
 - lens
 - megaparsec
+- multiplate
 - parser-combinators
 - recursion-schemes
 - text
