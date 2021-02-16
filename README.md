@@ -67,7 +67,7 @@ Writing out the type like this every time is tedious, though, so instead an
 
 ```
 let doNothing {a: Type} (x: a): a = x
-
+;;            ^       ^ note the curly brackets!
 doNothing 3 ;; => 3
 ```
 
