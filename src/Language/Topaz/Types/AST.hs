@@ -22,6 +22,9 @@ instance Semigroup Span where
 data Ident = Ident Text | Prefix Text
   deriving Show
 
+data QIdent = QIdent (Maybe ModulePath) Ident
+  deriving Show
+
 data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 
@@ -30,7 +33,7 @@ data Stage = Parsed | Desugared | ScopeCheck | ScopeChecked
 type TTGC (c ∷ Type → Constraint) n =
   (c (TTGIdent n), c (TTGLam n), c (TTGArgs n))
 
-data family TTGIdent (n ∷ Stage)
+type family TTGIdent (n ∷ Stage)
 type family TTGLam (n ∷ Stage)
 
 type Expr n = Cofree (ExprF n) Span

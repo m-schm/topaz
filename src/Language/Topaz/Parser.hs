@@ -22,8 +22,7 @@ dbg _ x = x
 {-# INLINE dbg #-}
 #endif
 
-data instance TTGIdent 'Parsed = RawIdent (Maybe ModulePath) Ident
-  deriving Show
+type instance TTGIdent 'Parsed = QIdent
 type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
 type instance TTGArgs 'Parsed = [Loc (Arg 'Parsed)]
 
@@ -130,7 +129,7 @@ expr1 eqb = dbg "expr1" $
       Loc name end ← ident
       let mp = viaNonEmpty ModulePath $ fmap unLoc path
           beg = path ^? _head . locSpan
-      pure $ maybe id (<>) beg end :< Var (RawIdent mp name)
+      pure $ maybe id (<>) beg end :< Var (QIdent mp name)
 
     literal = satisfy ('l':|"iteral") \case
       TLit l → Just $ Lit l
