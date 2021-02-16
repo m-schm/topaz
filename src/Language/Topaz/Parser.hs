@@ -29,8 +29,8 @@ type instance TTGArgs 'Parse = [Loc (Arg 'Parse)]
 
 type Parser = Parsec Void [Lexeme SourcePos]
 
-topLevel ∷ Parser (TopLevel 'Parse)
-topLevel = TopLevel
+topLevel ∷ ModulePath → Parser (TopLevel 'Parse)
+topLevel mp = TopLevel mp
   <$> many (decl pub <* many (token TNewline))
   <*> optional (expr AnythingGoes)
   <*  many (token TNewline)

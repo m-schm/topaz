@@ -22,7 +22,7 @@ instance Semigroup Span where
 data Ident = Ident Text | Prefix Text
   deriving Show
 
-newtype ModulePath = ModulePath (NonEmpty Text)
+data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 
 data Stage = Parse | ScopeCheck
@@ -112,5 +112,6 @@ instance Applicative Loc where
 data Block (n ∷ Stage) = Block [Decl n Block] (Expr n)
 deriving instance TTGC Show n ⇒ Show (Block n)
 
-data TopLevel (n ∷ Stage) = TopLevel [Decl n TopLevel] (Maybe (Expr n))
+data TopLevel (n ∷ Stage) =
+  TopLevel ModulePath [Decl n TopLevel] (Maybe (Expr n))
 deriving instance TTGC Show n ⇒ Show (TopLevel n)
