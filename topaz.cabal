@@ -23,6 +23,7 @@ source-repository head
 
 library
   exposed-modules:
+      Language.Topaz.Desugar
       Language.Topaz.Lexer
       Language.Topaz.Parser
       Language.Topaz.ScopeCheck

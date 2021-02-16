@@ -1,4 +1,6 @@
-module Language.Topaz.ScopeCheck (scopeCheck) where
+module Language.Topaz.ScopeCheck
+  ( scopeCheck, ScopeError(..)
+  ) where
 import Relude
 import Language.Topaz.Types.AST
 
@@ -18,6 +20,16 @@ data Env = Env
 newtype ChkM a = ChkM (State Env a)
   deriving newtype (Functor, Applicative, Monad)
 
+data Result a = Ok a | Err (NonEmpty ScopeError)
+  deriving Functor
+
+instance Applicative Result where
+  pure = Ok
+  Ok f  <*> Ok x   = Ok $ f x
+  Err e <*> Ok _   = Err e
+  Ok _  <*> Err e  = Err e
+  Err e <*> Err e' = Err $ e <> e'
+
 data ScopeError
   = NoIdent (Maybe ModulePath) Ident
   | NoQual ModulePath
@@ -28,14 +40,24 @@ scopeCheck = undefined
 
 phase1 ∷ TopLevel 'Parse → ChkM (TopLevel 'ScopeCheck)
 phase1 (TopLevel mp ds me) = TopLevel mp
-  <$> traverse declTop ds
+  <$> traverse decl ds
   <*> traverse expr me
 
-declTop ∷ Decl 'Parse TopLevel → ChkM (Decl 'ScopeCheck TopLevel)
-declTop = error "not implemented"
-
-decl ∷ Decl 'Parse Block → ChkM (Decl 'ScopeCheck Block)
-decl = error "not implemented"
+decl ∷ Decl 'Parse a → ChkM (Decl 'ScopeCheck a)
+decl = \case
+  DImport s i → pure (DImport s i) -- TODO: handle imports
+  DBind s sc i as t e → undefined
 
 expr ∷ Expr 'Parse → ChkM (Expr 'ScopeCheck)
 expr = error "not implemented"
+
+phase2 ∷ TopLevel 'ScopeCheck → Result (TopLevel 'ScopeChecked)
+phase2 (TopLevel mp ds me) = TopLevel mp
+  <$> traverse runDecl ds
+  <*> traverse runExpr me
+
+runDecl ∷ Decl 'ScopeCheck a → Result (Decl 'ScopeChecked a)
+runDecl = error "not implemented"
+
+runExpr ∷ Expr 'ScopeCheck → Result (Expr 'ScopeChecked)
+runExpr = error "not implemented"
