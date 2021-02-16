@@ -22,8 +22,8 @@ It has / is planned to have:
 This is a bit of a missing point in the design space - PureScript doesn't offer
 the full power of dependent types, while Agda isn't primarily meant for web
 development and is incredibly intimidating to newcomers. Inspired by ReasonML
-(now ReScript) and Elm, Topaz is aiming to be a more approachable to leverage
-the flexibility and correctness provided by dependent types.
+(now ReScript) and Elm, Topaz is aiming to be a more approachable language with
+which to leverage the flexibility and correctness provided by dependent types.
 
 Some syntax has been taken from [Olle Fredriksson's
 Sixten](https://github.com/ollef/sixten), particularly the usage of
