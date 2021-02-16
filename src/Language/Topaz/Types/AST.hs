@@ -1,11 +1,11 @@
 {-# LANGUAGE UndecidableInstances, TemplateHaskell #-}
 module Language.Topaz.Types.AST where
 import Relude
-import Control.Lens
+import Control.Lens hiding ((:<))
 import Language.Topaz.Types
 
 import Text.Megaparsec (SourcePos)
-import Control.Comonad.Cofree (Cofree)
+import Control.Comonad.Cofree (Cofree(..))
 import Text.Show
 import Data.Functor.Classes
 import Text.Show.Deriving (makeLiftShowsPrec)
@@ -118,3 +118,6 @@ deriving instance TTGC Show n ⇒ Show (Block n)
 data TopLevel (n ∷ Stage) =
   TopLevel ModulePath [Decl n TopLevel] (Maybe (Expr n))
 deriving instance TTGC Show n ⇒ Show (TopLevel n)
+
+_unwrap ∷ Lens (Cofree f a) (Cofree g a) (f (Cofree f a)) (g (Cofree g a))
+_unwrap f (x :< xs) = (x :<) <$> f xs
