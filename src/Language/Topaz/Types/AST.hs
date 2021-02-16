@@ -31,11 +31,7 @@ type TTGC (c ∷ Type → Constraint) n =
   (c (TTGIdent n), c (TTGLam n), c (TTGArgs n))
 
 data family TTGIdent (n ∷ Stage)
-data instance TTGIdent 'Parse = RawIdent (Maybe ModulePath) Ident
-  deriving Show
-
 type family TTGLam (n ∷ Stage)
-type instance TTGLam 'Parse = NonEmpty (Loc (Arg 'Parse))
 
 type Expr n = Cofree (ExprF n) Span
 
@@ -64,7 +60,6 @@ instance TTGC Show n ⇒ Show1 (ExprF n) where
     Hole → showString "Hole"
 
 type family TTGArgs (n ∷ Stage)
-type instance TTGArgs 'Parse = [Loc (Arg 'Parse)]
 
 data Decl (n ∷ Stage) a
   = DImport Span Import

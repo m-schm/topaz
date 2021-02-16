@@ -22,6 +22,11 @@ dbg _ x = x
 {-# INLINE dbg #-}
 #endif
 
+data instance TTGIdent 'Parse = RawIdent (Maybe ModulePath) Ident
+  deriving Show
+type instance TTGLam 'Parse = NonEmpty (Loc (Arg 'Parse))
+type instance TTGArgs 'Parse = [Loc (Arg 'Parse)]
+
 type Parser = Parsec Void [Lexeme SourcePos]
 
 topLevel ∷ Parser (TopLevel 'Parse)
