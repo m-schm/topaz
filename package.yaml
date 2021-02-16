@@ -1,0 +1,100 @@
+name:                topaz
+version:             0.1.0.0
+github:              "m-schm/topaz"
+license:             BSD3
+copyright:           "2021 m-schm"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/m-schm/topaz#readme>
+
+dependencies:
+- base
+- relude
+- array
+- bytestring
+- containers
+- comonad
+- deriving-compat
+- free
+- generic-lens
+- lens
+- megaparsec
+- parser-combinators
+- recursion-schemes
+- text
+- transformers
+- unordered-containers
+
+library:
+  source-dirs: src
+
+default-extensions:
+- AllowAmbiguousTypes
+- ApplicativeDo
+- BangPatterns
+- BlockArguments
+- ConstraintKinds
+- DataKinds
+- DeriveDataTypeable
+- DeriveFoldable
+- DeriveFunctor
+- DeriveGeneric
+- DeriveTraversable
+- DuplicateRecordFields
+- EmptyDataDeriving
+- FlexibleContexts
+- FlexibleInstances
+- GADTs
+- LambdaCase
+- MultiParamTypeClasses
+- NoImplicitPrelude
+- OverloadedLabels
+- OverloadedLists
+- OverloadedStrings
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- UnicodeSyntax
+
+executables:
+  topaz-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    - -Wpartial-fields
+    - -Wredundant-constraints
+    dependencies:
+    - topaz
+
+tests:
+  topaz-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - topaz

@@ -1,0 +1,40 @@
+import Effect.Console as Console
+
+let times {f} [Applicative f] (n: Nat) (x: f Unit): f Unit =
+  match n in
+    Z   => pure unit
+    S k => x *> times k x
+
+let double (x: int) = ;; `do` here??
+  let mul a b = a * b
+  x
+
+let repeatTwice: Effect Unit =
+  x <- input "> "
+  times 2 do
+    print x
+
+;; this is a comment
+;; x `f` y is sugar for f x y, which is the function call f(x, y)
+let fizzbuzz (max: int) =
+  let numbers = range 1 max
+  let isDivisibleBy x y = x `mod` y == 0 ;; types optional
+  for numbers $ n =>
+    let out: string =
+      match n `isDivisibleBy` 3, n `isDivisibleBy` 5 in
+        false, false => toString n
+        true,  false => "fizz"
+        false, true  => "buzz"
+        true,  true  => "fizzbuzz"
+    Console.log out
+
+let test (x: int): int = x + 1
+
+type Unit where unit: Unit
+type Void
+
+type Bool where true false: Bool
+let if {0 a: Bool -> Type} (b: Bool) (y: a true) (n: a false): a b =
+  match b in
+    true  => y
+    false => n
