@@ -5,6 +5,7 @@ import Language.Topaz.Types.AST
 import Language.Topaz.Parser ()
 
 import Control.Comonad.Cofree (unwrap, Cofree(..))
+import Control.Comonad
 
 type instance TTGIdent 'Desugared = QIdent
 type instance TTGArgs 'Desugared = ()
@@ -32,11 +33,26 @@ expr = _unwrap %~ \case
   Lit l → Lit l
   f :$ x → expr f :$ expr x
   f :$@ x → expr f :$@ expr x
-  Lam as t b → unwrap $ flattenLam as t b
+  Lam as t b →
+    let as' = as & mapped . loc %~ arg
+        t' = expr t
+        b' = b & loc %~ block
+    in unwrap $ flattenLam as' t' b'
   Var v → Var v
   Rec → Rec
   Hole → Hole
 
-flattenLam ∷ TTGLam 'Parsed → Expr 'Parsed → Loc (Block 'Parsed)
+arg ∷ Arg 'Parsed → Arg 'Desugared
+arg = error "not implemented"
+
+flattenLam ∷ NonEmpty (Loc (Arg 'Desugared))
   → Expr 'Desugared
-flattenLam = error "not implemented"
+  → Loc (Block 'Desugared)
+  → Expr 'Desugared
+flattenLam as t b@(Loc _ sb) = foldr go innermost (init as) where
+  innermost =
+    let a@(Loc _ sa) = last as
+    in (sa <> sb) :< Lam a t b
+
+  go ∷ Loc (Arg 'Desugared) → Expr 'Desugared → Expr 'Desugared
+  go a@(Loc _ sa) e = (sa <> extract e) :< _
