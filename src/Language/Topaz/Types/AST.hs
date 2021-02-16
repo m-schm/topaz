@@ -25,7 +25,7 @@ data Ident = Ident Text | Prefix Text
 newtype ModulePath = ModulePath (NonEmpty Text)
   deriving (Eq, Ord, Show)
 
-data Stage = Parse
+data Stage = Parse | ScopeCheck
 
 type TTGC (c ∷ Type → Constraint) n =
   (c (TTGIdent n), c (TTGLam n), c (TTGArgs n))
