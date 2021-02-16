@@ -36,16 +36,21 @@ can't do.
 ;; This is a comment
 
 ;; `Vec n a` represents lists that are `n` long, that contain `a`s
+;; A Vec is either:
 type Vec (n: Nat) (a: Type) =
+  ;; empty, with length 0
   Nil: {a} -> Vec 0 a
+  ;; 1 item longer than a Vec of length n
   `::`: {n a} -> a -> Vec n a -> Vec (n+1) a
 
 ;; Enforce that the two lists are the same length
 let zip {n a b} (left: Vec n a) (right: Vec n b): Vec n (a, b) =
   match left, right in
+    ;; Either both lists are empty...
     Nil,     Nil     => Nil
+    ;; or they both contain at least one item.
     x :: xs, y :: ys => (x, y) :: zip xs ys
-    ;; no other cases needed, because we know the lists are the same length
+    ;; No other cases are needed, because the lists are the same length!
 ```
 
 In fact, what other languages call "generics" are entirely absent in Topaz!
