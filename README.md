@@ -8,11 +8,14 @@ future.
 
 It has / is planned to have:
 
+- pervasive currying
 - dependent types
+- GADTs + propositional equality
 - universe polymorphism
 - row polymorphism
 - call-by-value semantics by default, but can be overridden
 - easy JS FFI à la PureScript
+- tail call optimization
 - irrelevant argument erasure
 - type-case (requires the above)
 - linear/affine types (tentative)
