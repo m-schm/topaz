@@ -34,21 +34,21 @@ data ScopeError
   = NoIdent (Maybe ModulePath) Ident
   | NoQual ModulePath
 
-scopeCheck ∷ TopLevel 'Parse
+scopeCheck ∷ TopLevel 'Parsed
   → Either (NonEmpty ScopeError) (TopLevel 'ScopeChecked)
 scopeCheck = undefined
 
-phase1 ∷ TopLevel 'Parse → ChkM (TopLevel 'ScopeCheck)
+phase1 ∷ TopLevel 'Parsed → ChkM (TopLevel 'ScopeCheck)
 phase1 (TopLevel mp ds me) = TopLevel mp
   <$> traverse decl ds
   <*> traverse expr me
 
-decl ∷ Decl 'Parse a → ChkM (Decl 'ScopeCheck a)
+decl ∷ Decl 'Parsed a → ChkM (Decl 'ScopeCheck a)
 decl = \case
   DImport s i → pure (DImport s i) -- TODO: handle imports
   DBind s sc i as t e → undefined
 
-expr ∷ Expr 'Parse → ChkM (Expr 'ScopeCheck)
+expr ∷ Expr 'Parsed → ChkM (Expr 'ScopeCheck)
 expr = error "not implemented"
 
 phase2 ∷ TopLevel 'ScopeCheck → Result (TopLevel 'ScopeChecked)

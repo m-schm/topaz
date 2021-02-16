@@ -22,14 +22,14 @@ dbg _ x = x
 {-# INLINE dbg #-}
 #endif
 
-data instance TTGIdent 'Parse = RawIdent (Maybe ModulePath) Ident
+data instance TTGIdent 'Parsed = RawIdent (Maybe ModulePath) Ident
   deriving Show
-type instance TTGLam 'Parse = NonEmpty (Loc (Arg 'Parse))
-type instance TTGArgs 'Parse = [Loc (Arg 'Parse)]
+type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
+type instance TTGArgs 'Parsed = [Loc (Arg 'Parsed)]
 
 type Parser = Parsec Void [Lexeme SourcePos]
 
-topLevel ∷ ModulePath → Parser (TopLevel 'Parse)
+topLevel ∷ ModulePath → Parser (TopLevel 'Parsed)
 topLevel mp = TopLevel mp
   <$> many (decl pub <* many (token TNewline))
   <*> optional (expr AnythingGoes)
@@ -39,7 +39,7 @@ topLevel mp = TopLevel mp
     pub ∷ Parser (Loc (Scope TopLevel))
     pub = Loc Global <$> token TPub
 
-block ∷ Parser (Loc (Block 'Parse))
+block ∷ Parser (Loc (Block 'Parsed))
 block = indented big
     <|> inline
   where
@@ -52,7 +52,7 @@ block = indented big
 data EqualsBehavior = AnythingGoes | NoEquals | NoLambda
   deriving Eq
 
-decl ∷ Parser (Loc (Scope a)) → Parser (Decl 'Parse a)
+decl ∷ Parser (Loc (Scope a)) → Parser (Decl 'Parsed a)
 decl pub = let_ <|> import_
   where
 
@@ -73,7 +73,7 @@ decl pub = let_ <|> import_
         (sc, ms, ) <$> token TImport
       undefined
 
-arg ∷ Parser (Loc (Arg 'Parse))
+arg ∷ Parser (Loc (Arg 'Parsed))
 arg = (\(Loc i s) → Loc (Arg i (s :< Hole)) s) <$> bare
   <|> parens explicit
   <|> braces implicit
@@ -99,7 +99,7 @@ arg = (\(Loc i s) → Loc (Arg i (s :< Hole)) s) <$> bare
       pure $ Loc (Instance (fmap unLoc name) ty) (s $ extract ty)
 
 -- TODO: operators
-expr ∷ EqualsBehavior → Parser (Expr 'Parse)
+expr ∷ EqualsBehavior → Parser (Expr 'Parsed)
 expr eqb = dbg "expr" $
       when' (eqb /= NoLambda) lam
   <|> foldl1' (.$) <$> some (expr1 eqb)
@@ -117,14 +117,14 @@ expr eqb = dbg "expr" $
 
     f .$ x = (extract f <> extract x) :< (f :$ x)
 
-expr1 ∷ EqualsBehavior → Parser (Expr 'Parse)
+expr1 ∷ EqualsBehavior → Parser (Expr 'Parsed)
 expr1 eqb = dbg "expr1" $
       var
   <|> (\(Loc e s) → s :< e) <$> literal
   <|> parens (expr eqb)
   where
 
-    var ∷ Parser (Expr 'Parse)
+    var ∷ Parser (Expr 'Parsed)
     var = do
       path ← pathPart `endBy'` token TPeriod
       Loc name end ← ident
