@@ -25,6 +25,11 @@ development and is incredibly intimidating to newcomers. Inspired by ReasonML
 (now ReScript) and Elm, Topaz is aiming to be a more approachable to leverage
 the flexibility and correctness provided by dependent types.
 
+Some syntax has been taken from [Olle Fredriksson's
+Sixten](https://github.com/ollef/sixten), particularly the usage of
+TypeApplications-style `@` for implicit arguments and `type` for (G)ADT
+declarations.
+
 ## "Dependent types"?
 
 In a dependently typed language, types are themselves a special kind of value,
