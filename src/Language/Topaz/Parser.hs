@@ -14,7 +14,7 @@ import Relude.Extra (foldMap1, foldl1')
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec hiding (Token, token, some, sepBy1, satisfy)
 
-#define DEBUG
+-- #define DEBUG
 #ifdef DEBUG
 import Text.Megaparsec.Debug
 #else
