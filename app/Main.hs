@@ -8,6 +8,7 @@ import Language.Topaz.Lexer (lex)
 import Language.Topaz.Parser (topLevel)
 import Language.Topaz.Desugar (desugar)
 import Language.Topaz.Types.AST (ModulePath(Main))
+import Language.Topaz.ScopeCheck (scopeCheck)
 
 main ∷ IO ()
 main = do
@@ -20,4 +21,6 @@ main = do
       Left peb → putStr $ errorBundlePretty peb
       Right toks → case runParser (topLevel mp) file toks of
         Left peb → print peb
-        Right ast → print $ desugar ast
+        Right ast → case scopeCheck (desugar ast) of
+          Left ses → traverse_ print ses
+          Right ast' → print ast'

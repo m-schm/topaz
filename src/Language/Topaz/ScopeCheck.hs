@@ -34,22 +34,23 @@ instance Applicative Result where
 data ScopeError
   = NoIdent (Maybe ModulePath) Ident
   | NoQual ModulePath
+  deriving Show
 
-scopeCheck ∷ TopLevel 'Parsed
+scopeCheck ∷ TopLevel 'Desugared
   → Either (NonEmpty ScopeError) (TopLevel 'ScopeChecked)
 scopeCheck = undefined
 
-phase1 ∷ TopLevel 'Parsed → ChkM (TopLevel 'ScopeCheck)
+phase1 ∷ TopLevel 'Desugared → ChkM (TopLevel 'ScopeCheck)
 phase1 (TopLevel mp ds me) = TopLevel mp
   <$> traverse decl ds
   <*> traverse expr me
 
-decl ∷ Decl 'Parsed a → ChkM (Decl 'ScopeCheck a)
+decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeCheck a)
 decl = \case
   DImport s i → pure (DImport s i) -- TODO: handle imports
   DBind s sc i as t e → undefined
 
-expr ∷ Expr 'Parsed → ChkM (Expr 'ScopeCheck)
+expr ∷ Expr 'Desugared → ChkM (Expr 'ScopeCheck)
 expr = error "not implemented"
 
 phase2 ∷ TopLevel 'ScopeCheck → Result (TopLevel 'ScopeChecked)
