@@ -18,7 +18,7 @@ data NameSource = Imported ModulePath | Local
 
 data Env = Env
   { unqualified ∷ Map Ident NameSource
-  , qualified ∷ Map ModulePath (Set Ident)
+  , qualified ∷ Map ModulePath (Map Ident ModulePath)
   } deriving Generic
 
 instance Semigroup Env where
@@ -54,6 +54,7 @@ instance Monad Result where
 data ScopeError
   = NoIdent (Maybe ModulePath) Ident
   | NoQual ModulePath
+  | Ambiguous [ModulePath] Ident
   deriving Show
 
 scopeCheck ∷ TopLevel 'Desugared
@@ -69,7 +70,7 @@ scopeCheck (TopLevel mp ds me) =
 decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeChecked a)
 decl = \case
   DImport s i → pure (DImport s i) -- TODO: handle imports
-  DBind s sc i () t e → do
+  DBind s sc i () t b → do
     t' ← expr t
     #unqualified . at i ?= Local
     DBind s sc i () t' <$> loc block b
@@ -108,3 +109,19 @@ local ∷ ChkM a → ChkM a
 local ma = push *> ma <* pop where
   push = ChkM $ modify' (NE.cons mempty)
   pop = ChkM $ modify' (NE.fromList . tail)
+
+lookup ∷ QIdent → ChkM KnownIdent
+lookup (QIdent mmp i) = ChkM $ case mmp of
+  Nothing →
+    gets (firstOf $ folded . #unqualified . ix i) >>= \case
+      Nothing            → throw $ NoIdent mmp i
+      Just Local         → pure $ LocalDef i
+      Just (Imported mp) → pure $ Known mp i
+  Just mp →
+    gets (toListOf $ folded . #qualified . ix mp) >>= \case
+      [] → throw $ NoQual mp
+      xs → case xs ^.. folded . ix i of
+        []  → throw $ NoIdent mmp i
+        [p] → pure $ Known p i
+        ps  → throw $ Ambiguous ps i
+  where throw = lift . Err . pure
