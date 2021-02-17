@@ -81,11 +81,9 @@ expr = _unwrap %%~ \case
   f :$@ x → liftA2 (:$@) (expr f) (expr x)
   Lam a ty b → local $
     liftA3 Lam (loc arg a) (expr ty) (loc block b)
-  Var (QIdent mmp i) → case mmp of
-    Nothing → _
-    Just mp → _
-  Rec → _
-  Hole → _
+  Var i → _
+  Rec → pure Rec
+  Hole → pure Hole
 
 arg ∷ Arg 'Desugared → ChkM (Arg 'ScopeChecked)
 arg (Arg mi e) = do
@@ -93,8 +91,15 @@ arg (Arg mi e) = do
   whenJust mi \i →
     #locals %= S.insert i
   pure $ Arg mi e'
-arg (Implicit i e) = _
-arg (Instance mi e) = _
+arg (Implicit i e) = do
+  e' ← expr e
+  #locals %= S.insert i
+  pure $ Implicit i e'
+arg (Instance mi e) = do
+  e' ← expr e
+  whenJust mi \i →
+    #locals %= S.insert i
+  pure $ Arg mi e'
 
 local ∷ ChkM a → ChkM a
 local ma = push *> ma <* pop where
