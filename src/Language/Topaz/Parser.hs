@@ -62,7 +62,7 @@ decl pub = let_ <|> import_
       mret ← optional $ token TColon *> expr NoEquals
       eq ← token (TOp "=")
       let ret = fromMaybe (eq :< Hole) mret
-      Loc b end ← block
+      b@(Loc _ end) ← block
       pure $ DBind (beg <> end) s i as ret b
 
     import_ = do

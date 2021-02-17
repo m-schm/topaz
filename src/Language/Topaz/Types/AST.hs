@@ -69,7 +69,7 @@ type family TTGArgs (n ∷ Stage)
 
 data Decl (n ∷ Stage) a
   = DImport Span Import
-  | DBind Span (Scope a) Ident (TTGArgs n) (Expr n) (Block n)
+  | DBind Span (Scope a) Ident (TTGArgs n) (Expr n) (Loc (Block n))
 
 deriving instance TTGC Show n ⇒ Show (Decl n a)
 
