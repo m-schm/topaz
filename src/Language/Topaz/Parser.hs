@@ -158,11 +158,9 @@ ident = satisfy ('i':|"dentifier") \case
   _         → Nothing
 
 pathPart ∷ Parser (Loc Text)
-pathPart = MP.token lex err where
-  err = S.singleton $ Label ('i':|"dentifier")
-  lex (L x t y) = case t of
-    TVar v → Just $ Loc v $ Span x y
-    _      → Nothing
+pathPart = satisfy ('i':|"dentifier") \case
+  TVar v → Just v
+  _      → Nothing
 
 mkSurround ∷ Parser Span → Parser Span → Parser a → Parser (Loc a)
 mkSurround l r = \p → do
