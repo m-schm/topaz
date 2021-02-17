@@ -20,7 +20,7 @@ instance Semigroup Span where
   Span a b <> Span x y = Span (a `min` x) (b `max` y)
 
 data Ident = Ident Text | Prefix Text
-  deriving Show
+  deriving (Eq, Ord, Show)
 
 data QIdent = QIdent (Maybe ModulePath) Ident
   deriving Show
@@ -31,7 +31,7 @@ data KnownIdent = LocalDef Ident | Known ModulePath Ident
 data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 
-data Stage = Parsed | Desugared | ScopeCheck | ScopeChecked
+data Stage = Parsed | Desugared | ScopeChecked
 
 type TTGC (c ∷ Type → Constraint) n =
   (c (TTGIdent n), c (TTGLam n), c (TTGArgs n))
