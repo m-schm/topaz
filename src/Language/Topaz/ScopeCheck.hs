@@ -69,8 +69,10 @@ scopeCheck (TopLevel mp ds me) =
 decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeChecked a)
 decl = \case
   DImport s i → pure (DImport s i) -- TODO: handle imports
-  DBind s sc i () t e →
-    DBind s sc i () <$> expr t <*> (e & loc %%~ block)
+  DBind s sc i () t e → do
+    t' ← expr t
+    #unqualified . at i ?= Local
+    DBind s sc i () t' <$> loc block b
 
 block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
 block (Block ds e) = local $ liftA2 Block (traverse decl ds) (expr e)
