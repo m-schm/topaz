@@ -85,7 +85,7 @@ expr = _unwrap %%~ \case
   f :$@ x → liftA2 (:$@) (expr f) (expr x)
   Lam a ty b → local $
     liftA3 Lam (loc arg a) (expr ty) (loc block b)
-  Var i → _
+  Var i → Var <$> lookup i
   Rec → pure Rec
   Hole → pure Hole
 
