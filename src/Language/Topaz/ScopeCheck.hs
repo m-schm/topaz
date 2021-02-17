@@ -28,6 +28,11 @@ instance Monoid Env where
 newtype ChkM a = ChkM (StateT (NonEmpty Env) Result a)
   deriving newtype (Functor, Applicative, Monad)
 
+instance MonadState Env ChkM where
+  get = ChkM $ gets head
+  put = ChkM . assign neHead where
+    neHead = lens head (\(x :| xs) y → y :| xs)
+
 data Result a = Ok a | Err (NonEmpty ScopeError)
   deriving Functor
 
