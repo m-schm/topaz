@@ -7,6 +7,8 @@ import Language.Topaz.Types.AST
 import Language.Topaz.Desugar ()
 
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Set as S
+import Data.Generics.Labels ()
 
 type instance TTGIdent 'ScopeChecked = KnownIdent
 type instance TTGArgs 'ScopeChecked = ()
@@ -16,7 +18,7 @@ data Env = Env
   { unqualified ∷ Map Ident ModulePath
   , qualified ∷ Map ModulePath (Set Ident)
   , locals ∷ Set Ident
-  }
+  } deriving Generic
 
 instance Semigroup Env where
   Env uq q l <> Env uq' q' l' = Env (uq <> uq') (q <> q') (l <> l')
@@ -86,7 +88,11 @@ expr = _unwrap %%~ \case
   Hole → _
 
 arg ∷ Arg 'Desugared → ChkM (Arg 'ScopeChecked)
-arg (Arg mi e) = _
+arg (Arg mi e) = do
+  e' ← expr e
+  whenJust mi \i →
+    #locals %= S.insert i
+  pure $ Arg mi e'
 arg (Implicit i e) = _
 arg (Instance mi e) = _
 
