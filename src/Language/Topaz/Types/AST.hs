@@ -1,4 +1,4 @@
-{-# LANGUAGE UndecidableInstances, TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Language.Topaz.Types.AST where
 import Relude
 import Control.Lens hiding ((:<))
@@ -8,9 +8,6 @@ import Text.Megaparsec (SourcePos)
 import Control.Comonad.Cofree (Cofree(..))
 import Text.Show
 import Data.Functor.Classes
-import Text.Show.Deriving (makeLiftShowsPrec)
-import Data.Functor.Foldable
-import qualified Control.Comonad.Trans.Cofree as F
 
 data Span = Span SourcePos SourcePos
 
@@ -54,7 +51,7 @@ data ExprF (n ∷ Stage) r
 deriving instance (Show r, TTGC Show n) ⇒ Show (ExprF n r)
 
 instance TTGC Show n ⇒ Show1 (ExprF n) where
-  liftShowsPrec showsPrec' showList' prec = \case
+  liftShowsPrec showsPrec' _ prec = \case
     Lit lit → showString "Lit " . showsPrec 10 lit
     f :$ x → showsPrec' 10 f . showString " :$ " . showsPrec' 10 x
     f :$@ x → showsPrec' 10 f . showString " :$@ " . showsPrec' 10 x

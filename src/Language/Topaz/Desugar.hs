@@ -5,7 +5,6 @@ import Language.Topaz.Types.AST
 import Language.Topaz.Parser ()
 
 import Control.Comonad.Cofree (unwrap, Cofree(..))
-import Control.Comonad
 
 type instance TTGIdent 'Desugared = QIdent
 type instance TTGArgs 'Desugared = ()

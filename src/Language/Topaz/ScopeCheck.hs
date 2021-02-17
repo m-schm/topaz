@@ -7,7 +7,6 @@ import Language.Topaz.Types.AST hiding (Local)
 import Language.Topaz.Desugar ()
 
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Set as S
 import Data.Generics.Labels ()
 
 type instance TTGIdent 'ScopeChecked = KnownIdent
@@ -34,7 +33,7 @@ newtype ChkM a = ChkM (StateT (NonEmpty Env) Result a)
 instance MonadState Env ChkM where
   get = ChkM $ gets head
   put = ChkM . assign neHead where
-    neHead = lens head (\(x :| xs) y → y :| xs)
+    neHead = lens head (\(_ :| xs) y → y :| xs)
 
 data Result a = Ok a | Err (NonEmpty ScopeError)
   deriving Functor
@@ -48,7 +47,7 @@ instance Applicative Result where
 
 instance Monad Result where
   return = pure
-  Err e >>= f = Err e
+  Err e >>= _ = Err e
   Ok  x >>= f = f x
 
 data ScopeError

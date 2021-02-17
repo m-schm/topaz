@@ -4,7 +4,7 @@ import Control.Lens hiding (lastOf, noneOf)
 import Language.Topaz.Types.Lexer
 
 import Data.Char
-import Data.Generics.Labels
+import Data.Generics.Labels ()
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Relude.Unsafe as Unsafe
@@ -219,13 +219,13 @@ dedent ind = go [] where
 
 getIndent ∷ Parser Indent
 getIndent = gets $
-  indents >>> \case [] → Implicit (AbsIndent 0 0); x:xs → x
+  indents >>> \case [] → Implicit (AbsIndent 0 0); x:_ → x
 
 pushIndent ∷ Indent → Parser ()
 pushIndent = (#indents %=) . (:)
 
 popIndent ∷ Parser ()
-popIndent = #indents %= \case [] → []; x:xs → xs
+popIndent = #indents %= \case [] → []; _:xs → xs
 
 lastOf ∷ MonadParsec e s m ⇒ m a → m a
 lastOf p = do

@@ -3,14 +3,13 @@ module Language.Topaz.Parser where
 import Relude hiding (All, many, some)
 import Control.Lens hiding ((:<))
 import Language.Topaz.Types.AST
-import Language.Topaz.Types.Lexer (unLexeme, Lexeme(..), Token(..))
+import Language.Topaz.Types.Lexer (Lexeme(..), Token(..))
 
 import Control.Applicative.Combinators.NonEmpty
 import Control.Comonad
 import Control.Comonad.Cofree
-import qualified Data.List.NonEmpty as UnsafeNE
 import qualified Data.Set as S
-import Relude.Extra (foldMap1, foldl1')
+import Relude.Extra (foldl1')
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec hiding (Token, token, some, sepBy1, satisfy)
 
@@ -18,6 +17,7 @@ import Text.Megaparsec hiding (Token, token, some, sepBy1, satisfy)
 #ifdef DEBUG
 import Text.Megaparsec.Debug
 #else
+dbg ∷ String → a → a
 dbg _ x = x
 {-# INLINE dbg #-}
 #endif
@@ -141,8 +141,8 @@ satisfy = satisfy' . S.singleton . Label
 
 satisfy' ∷ Set (ErrorItem (Lexeme SourcePos)) → (Token → Maybe a)
   → Parser (Loc a)
-satisfy' err pred = MP.token lex err where
-  lex (L x t y) = fmap (\a → Loc a (Span x y)) $ pred t
+satisfy' err cond = MP.token lex err where
+  lex (L x t y) = fmap (\a → Loc a (Span x y)) $ cond t
 
 token ∷ Token → Parser Span
 token t = do
