@@ -46,12 +46,14 @@ can't do.
 ;; `Vec n a` represents lists that are `n` long, that contain `a`s
 ;; A Vec is either:
 type Vec (n: Nat) (a: Type) =
-  ;; empty, with length 0
+  ;; empty, with length 0...
   Nil: {a} -> Vec 0 a
-  ;; 1 item longer than a Vec of length n
+  ;; or 1 item longer than a Vec of length n.
   `::`: {n a} -> a -> Vec n a -> Vec (n+1) a
 
-;; Enforce that the two lists are the same length
+;; `zip` should take two lists and return a list of pairs.
+;; The two lists are required to be the same length because `n` is be the same
+;; for both parameters.
 let zip {n a b} (left: Vec n a) (right: Vec n b): Vec n (a, b) =
   match left, right in
     ;; Either both lists are empty...
