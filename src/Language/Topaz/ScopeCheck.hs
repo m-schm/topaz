@@ -6,10 +6,11 @@ import Control.Lens
 import Language.Topaz.Types.AST
 import Language.Topaz.Desugar ()
 
-import qualified Relude.Unsafe as Unsafe
+import qualified Data.List.NonEmpty as NE
 
 type instance TTGIdent 'ScopeChecked = KnownIdent
 type instance TTGArgs 'ScopeChecked = ()
+type instance TTGLam 'ScopeChecked = Loc (Arg 'ScopeChecked)
 
 data Env = Env
   { unqualified ∷ Map Ident ModulePath
@@ -24,7 +25,7 @@ instance Monoid Env where
   mappend = (<>)
   mempty = Env mempty mempty mempty
 
-newtype ChkM a = ChkM (StateT [Env] Result a)
+newtype ChkM a = ChkM (StateT (NonEmpty Env) Result a)
   deriving newtype (Functor, Applicative, Monad)
 
 data Result a = Ok a | Err (NonEmpty ScopeError)
@@ -51,7 +52,11 @@ scopeCheck ∷ TopLevel 'Desugared
   → Either (NonEmpty ScopeError) (TopLevel 'ScopeChecked)
 scopeCheck (TopLevel mp ds me) =
   TopLevel mp <$> traverse decl ds <*> traverse expr me
-  & _
+  & runChkM [mempty]
+  where
+    runChkM s (ChkM ma) = case evalStateT ma s of
+      Ok a   → Right a
+      Err es → Left es
 
 decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeChecked a)
 decl = \case
@@ -59,13 +64,28 @@ decl = \case
   DBind s sc i () t e →
     DBind s sc i () <$> expr t <*> (e & loc %%~ block)
 
-block :: Block 'Desugared → ChkM (Block 'ScopeChecked)
-block = error "not implemented"
+block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
+block (Block ds e) = local $ liftA2 Block (traverse decl ds) (expr e)
 
 expr ∷ Expr 'Desugared → ChkM (Expr 'ScopeChecked)
-expr = error "not implemented"
+expr = _unwrap %%~ \case
+  Lit l → pure (Lit l)
+  f :$ x → liftA2 (:$) (expr f) (expr x)
+  f :$@ x → liftA2 (:$@) (expr f) (expr x)
+  Lam a ty b → local $
+    liftA3 Lam (loc arg a) (expr ty) (loc block b)
+  Var (QIdent mmp i) → case mmp of
+    Nothing → _
+    Just mp → _
+  Rec → _
+  Hole → _
+
+arg ∷ Arg 'Desugared → ChkM (Arg 'ScopeChecked)
+arg (Arg mi e) = _
+arg (Implicit i e) = _
+arg (Instance mi e) = _
 
 local ∷ ChkM a → ChkM a
 local ma = push *> ma <* pop where
-  push = ChkM $ modify' (mempty :)
-  pop = ChkM $ modify' Unsafe.tail
+  push = ChkM $ modify' (NE.cons mempty)
+  pop = ChkM $ modify' (NE.fromList . tail)
