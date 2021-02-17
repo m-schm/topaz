@@ -25,6 +25,9 @@ data Ident = Ident Text | Prefix Text
 data QIdent = QIdent (Maybe ModulePath) Ident
   deriving Show
 
+data KnownIdent = LocalDef Ident | Known ModulePath Ident
+  deriving Show
+
 data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 

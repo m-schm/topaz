@@ -4,12 +4,13 @@ module Language.Topaz.ScopeCheck
 import Relude
 import Language.Topaz.Types.AST
 
-data instance TTGIdent 'ScopeCheck
-  = DuringCheck (TTGIdent 'ScopeChecked)
+type instance TTGIdent 'ScopeCheck = MidCheckIdent
+data MidCheckIdent
+  = DuringCheck KnownIdent
   | Unknown (Maybe ModulePath) Ident
   deriving Show
-data instance TTGIdent 'ScopeChecked = LocalDef Ident | Known ModulePath Ident
-  deriving Show
+
+type instance TTGIdent 'ScopeChecked = KnownIdent
 
 data Env = Env
   { unqualified ∷ Map Ident ModulePath
