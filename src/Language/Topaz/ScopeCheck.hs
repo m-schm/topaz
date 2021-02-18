@@ -102,7 +102,7 @@ arg (Instance mi e) = do
   e' ← expr e
   whenJust mi \i →
     #unqualified . at i ?= Local
-  pure $ Arg mi e'
+  pure $ Instance mi e'
 
 local ∷ ChkM a → ChkM a
 local ma = push *> ma <* pop where
