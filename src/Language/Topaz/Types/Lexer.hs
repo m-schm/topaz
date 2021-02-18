@@ -4,7 +4,7 @@ module Language.Topaz.Types.Lexer
   , Literal(..)
   ) where
 import Relude
-import Language.Topaz.Types
+import Language.Topaz.Types.Literal
 
 import Text.Show (showsPrec)
 import Text.Megaparsec (VisualStream(..))

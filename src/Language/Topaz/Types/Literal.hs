@@ -1,4 +1,4 @@
-module Language.Topaz.Types where
+module Language.Topaz.Types.Literal where
 import Relude
 
 data Literal

@@ -2,7 +2,7 @@
 module Language.Topaz.Types.AST where
 import Relude
 import Control.Lens hiding ((:<))
-import Language.Topaz.Types
+import Language.Topaz.Types.Literal
 
 import Text.Megaparsec (SourcePos)
 import Control.Comonad.Cofree (Cofree(..))
