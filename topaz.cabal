@@ -27,7 +27,6 @@ library
       Language.Topaz.Lexer
       Language.Topaz.Parser
       Language.Topaz.ScopeCheck
-      Language.Topaz.Types
       Language.Topaz.Types.AST
       Language.Topaz.Types.Lexer
       Language.Topaz.Types.Literal

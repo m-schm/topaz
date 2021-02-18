@@ -1,10 +1,11 @@
 module Language.Topaz.Desugar (desugar) where
-import Relude
-import Control.Lens hiding ((:<))
-import Language.Topaz.Types.AST
+
 import Language.Topaz.Parser ()
+import Language.Topaz.Types.AST
 
 import Control.Comonad.Cofree (unwrap, Cofree(..))
+import Control.Lens hiding ((:<))
+import Relude
 
 type instance TTGIdent 'Desugared = QIdent
 type instance TTGArgs 'Desugared = ()

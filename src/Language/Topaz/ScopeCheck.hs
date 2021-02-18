@@ -1,13 +1,14 @@
 module Language.Topaz.ScopeCheck
   ( scopeCheck, ScopeError(..)
   ) where
-import Relude hiding (local)
-import Control.Lens
-import Language.Topaz.Types.AST hiding (Local)
-import Language.Topaz.Desugar ()
 
-import qualified Data.List.NonEmpty as NE
+import Language.Topaz.Desugar ()
+import Language.Topaz.Types.AST hiding (Local)
+
+import Control.Lens
 import Data.Generics.Labels ()
+import qualified Data.List.NonEmpty as NE
+import Relude hiding (local)
 
 type instance TTGIdent 'ScopeChecked = KnownIdent
 type instance TTGArgs 'ScopeChecked = ()

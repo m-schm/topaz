@@ -4,11 +4,12 @@ module Language.Topaz.Types.Lexer
   , Literal(..)
   ) where
 import Relude
+
 import Language.Topaz.Types.Literal
 
-import Text.Show (showsPrec)
-import Text.Megaparsec (VisualStream(..))
 import qualified Data.List as Str
+import Text.Megaparsec (VisualStream(..))
+import Text.Show (showsPrec)
 
 data Lexeme a = L a Token a
   deriving (Eq, Ord)

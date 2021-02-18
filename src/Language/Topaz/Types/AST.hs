@@ -1,13 +1,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Language.Topaz.Types.AST where
 import Relude
-import Control.Lens hiding ((:<))
+
 import Language.Topaz.Types.Literal
 
-import Text.Megaparsec (SourcePos)
 import Control.Comonad.Cofree (Cofree(..))
-import Text.Show
+import Control.Lens hiding ((:<))
 import Data.Functor.Classes
+import Text.Megaparsec (SourcePos)
+import Text.Show
 
 data Span = Span SourcePos SourcePos
 

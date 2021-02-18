@@ -1,14 +1,15 @@
 {-# LANGUAGE CPP #-}
 module Language.Topaz.Parser where
-import Relude hiding (All, many, some)
-import Control.Lens hiding ((:<))
+
 import Language.Topaz.Types.AST
 import Language.Topaz.Types.Lexer (Lexeme(..), Token(..))
 
 import Control.Applicative.Combinators.NonEmpty
 import Control.Comonad
 import Control.Comonad.Cofree
+import Control.Lens hiding ((:<))
 import qualified Data.Set as S
+import Relude hiding (All, many, some)
 import Relude.Extra (foldl1')
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec hiding (Token, token, some, sepBy1, satisfy)

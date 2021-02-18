@@ -1,12 +1,13 @@
 module Language.Topaz.Lexer where
-import Relude hiding (many, some)
-import Control.Lens hiding (lastOf, noneOf)
+
 import Language.Topaz.Types.Lexer
 
+import Control.Lens hiding (lastOf, noneOf)
 import Data.Char
 import Data.Generics.Labels ()
 import qualified Data.Set as S
 import qualified Data.Text as T
+import Relude hiding (many, some)
 import qualified Relude.Unsafe as Unsafe
 import Text.Megaparsec hiding (State, Token, count)
 import Text.Megaparsec.Char
