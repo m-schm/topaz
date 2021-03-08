@@ -6,8 +6,8 @@ import Language.Topaz.Types.Lexer (Lexeme(..), Token(..))
 
 import Control.Applicative.Combinators.NonEmpty
 import Control.Comonad
-import Control.Comonad.Cofree
-import Control.Lens hiding ((:<))
+import Control.Comonad.Cofree hiding (_unwrap)
+import Control.Lens hiding ((:<), op)
 import qualified Data.Set as S
 import Relude hiding (All, many, some)
 import Relude.Extra (foldl1')
@@ -101,11 +101,12 @@ arg = (\(Loc i s) → Loc (Arg i (s :< Hole)) s) <$> bare
 
 -- TODO: operators
 expr ∷ EqualsBehavior → Parser (Expr 'Parsed)
-expr eqb = dbg "expr" $
-      when' (eqb /= NoLambda) lam
-  <|> foldl1' (.$) <$> some (expr1 eqb)
-  where
+expr eqb = dbg "expr" $ try (opExpr eqb) <|> expr' eqb
 
+expr' ∷ EqualsBehavior → Parser (Expr 'Parsed)
+expr' eqb = when' (eqb /= NoLambda) lam
+        <|> app eqb
+  where
     lam = do
       (as, mret, s) ← try $ liftA3 (,,)
         (some arg)
@@ -116,7 +117,24 @@ expr eqb = dbg "expr" $
       pure $ (view locSpan (head as) <> bs)
         :< Lam as ret body
 
-    f .$ x = (extract f <> extract x) :< (f :$ x)
+opExpr ∷ EqualsBehavior → Parser (Expr 'Parsed)
+opExpr eqb = mkOp
+  <$> some (liftA2 (,) (app eqb) op)
+  <*> expr' eqb
+  where
+    op = satisfy ('o':|"perator") \case
+      TOp t → Just t
+      _     → Nothing
+
+    mkOp ∷ NonEmpty (Expr 'Parsed, Loc Text) → Expr 'Parsed → Expr 'Parsed
+    mkOp xs e =
+      let (s, o) = foldr buildBinop (extract e, End e) xs
+      in s :< X o
+    buildBinop (l, o) (s, r) = (s <> extract l, Binop l o r)
+
+app ∷ EqualsBehavior → Parser (Expr 'Parsed)
+app eqb = foldl1' (.$) <$> some (expr1 eqb) where
+  f .$ x = (extract f <> extract x) :< (f :$ x)
 
 expr1 ∷ EqualsBehavior → Parser (Expr 'Parsed)
 expr1 eqb = dbg "expr1" $
