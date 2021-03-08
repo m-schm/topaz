@@ -49,6 +49,11 @@ expr = _unwrap %~ \case
   Var v → Var v
   Rec → Rec
   Hole → Hole
+  X es → X (ops es)
+
+ops ∷ Ops (Expr 'Parsed) → Ops (Expr 'Desugared)
+ops (End e) = End (expr e)
+ops (Binop l o r) = Binop (expr l) o (ops r)
 
 arg ∷ Arg 'Parsed → Arg 'Desugared
 arg (Arg mi t) = Arg mi (expr t)
