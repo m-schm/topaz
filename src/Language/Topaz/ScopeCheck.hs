@@ -11,20 +11,19 @@ import qualified Data.List.NonEmpty as NE
 import Relude hiding (local)
 
 type instance TTGIdent 'ScopeChecked = KnownIdent
-type instance TTGArgs 'ScopeChecked = ()
+type instance TTGDecl 'ScopeChecked = ()
 type instance TTGLam 'ScopeChecked = Loc (Arg 'ScopeChecked)
 type instance TTGX 'ScopeChecked = Void
 
 data NameSource = Imported ModulePath | Local
-data WithFixity a = WithFixity (Maybe Word) (Maybe Fixity) a
+data WithFixity a = WithFixity FixityPrec a
   deriving (Functor, Foldable, Traversable)
-data Fixity = Infixl | Infixr
 
-pattern Unknown ∷ a → WithFixity a
-pattern Unknown a = WithFixity Nothing Nothing a
+pattern Unknown ∷ a -> WithFixity a
+pattern Unknown a = WithFixity (FixityPrec Nothing Nothing) a
 
 unFixity ∷ WithFixity a → a
-unFixity (WithFixity _ _ a) = a
+unFixity (WithFixity _ a) = a
 
 data Env = Env
   { unqualified ∷ Map Ident (WithFixity NameSource)
@@ -80,10 +79,11 @@ scopeCheck (TopLevel mp ds me) =
 decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeChecked a)
 decl = \case
   DImport s i → pure (DImport s i) -- TODO: handle imports
-  DBind s sc i () t b → do
+  DBind s sc i t b f → do
     t' ← expr t
-    #unqualified . at i ?= Unknown Local
-    DBind s sc i () t' <$> loc block b
+    #unqualified . at i ?= WithFixity f Local
+    b' ← loc block b
+    pure $ DBind s sc i t' b' ()
 
 block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
 block (Block ds e) = local $ liftA2 Block (traverse decl ds) (expr e)
@@ -98,7 +98,7 @@ expr = _unwrap %%~ \case
   Var i → Var <$> lookup i
   Rec → pure Rec
   Hole → pure Hole
-  X ops → _
+  X ops → undefined
 
 arg ∷ Arg 'Desugared → ChkM (Arg 'ScopeChecked)
 arg (Arg mi e) = do

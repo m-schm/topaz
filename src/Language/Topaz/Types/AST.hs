@@ -35,7 +35,7 @@ data Ops a = End a | Binop a (Loc Text) (Ops a)
 data Stage = Parsed | Desugared | ScopeChecked
 
 type TTGC (c ∷ Type → Constraint) n =
-  (c (TTGIdent n), c (TTGLam n), c (TTGArgs n), c (TTGX n))
+  (c (TTGIdent n), c (TTGLam n), c (TTGDecl n), c (TTGX n))
 
 type family TTGIdent (n ∷ Stage)
 type family TTGLam (n ∷ Stage)
@@ -69,11 +69,11 @@ instance TTGC Show n ⇒ Show1 (ExprF n) where
     Hole → showString "Hole"
     X a → showsPrec prec a
 
-type family TTGArgs (n ∷ Stage)
+type family TTGDecl (n ∷ Stage)
 
 data Decl (n ∷ Stage) a
   = DImport Span Import
-  | DBind Span (Scope a) Ident (TTGArgs n) (Expr n) (Loc (Block n))
+  | DBind Span (Scope a) Ident (Expr n) (Loc (Block n)) (TTGDecl n)
 
 deriving instance TTGC Show n ⇒ Show (Decl n a)
 
@@ -125,6 +125,9 @@ deriving instance TTGC Show n ⇒ Show (Block n)
 data TopLevel (n ∷ Stage) =
   TopLevel ModulePath [Decl n TopLevel] (Maybe (Expr n))
 deriving instance TTGC Show n ⇒ Show (TopLevel n)
+
+data FixityPrec = FixityPrec (Maybe Word) (Maybe Fixity)
+data Fixity = Infixl | Infixr
 
 _unwrap ∷ Lens (Cofree f a) (Cofree g a) (f (Cofree f a)) (g (Cofree g a))
 _unwrap f (x :< xs) = (x :<) <$> f xs

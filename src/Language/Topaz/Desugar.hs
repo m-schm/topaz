@@ -1,6 +1,6 @@
 module Language.Topaz.Desugar (desugar) where
 
-import Language.Topaz.Parser ()
+import Language.Topaz.Parser (pattern SurfaceBind)
 import Language.Topaz.Types.AST
 
 import Control.Comonad.Cofree (unwrap, Cofree(..))
@@ -8,7 +8,7 @@ import Control.Lens hiding ((:<))
 import Relude
 
 type instance TTGIdent 'Desugared = QIdent
-type instance TTGArgs 'Desugared = ()
+type instance TTGDecl 'Desugared = FixityPrec
 type instance TTGLam 'Desugared = Loc (Arg 'Desugared)
 type instance TTGX 'Desugared = Ops (Expr 'Desugared)
 
@@ -20,10 +20,10 @@ block (Block ds e) = Block (fmap decl ds) (expr e)
 
 decl ∷ Decl 'Parsed a → Decl 'Desugared a
 decl (DImport s i) = DImport s i
-decl (DBind s sc i as t b) =
+decl (SurfaceBind s sc i f as t b) =
   let as' = as & mapped . loc %~ arg
       (t', b') = flattenArgs as' (expr t, over loc block b)
-  in DBind s sc i () t' b'
+  in DBind s sc i t' b' f
 
 flattenArgs ∷ [Loc (Arg 'Desugared)]
   → (Expr 'Desugared, Loc (Block 'Desugared))

@@ -25,8 +25,11 @@ dbg _ x = x
 
 type instance TTGIdent 'Parsed = QIdent
 type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
-type instance TTGArgs 'Parsed = [Loc (Arg 'Parsed)]
 type instance TTGX 'Parsed = Ops (Expr 'Parsed)
+type instance TTGDecl 'Parsed = (FixityPrec, [Loc (Arg 'Parsed)])
+
+pattern SurfaceBind sp sc i f a e b = DBind sp sc i e b (f, a)
+{-# COMPLETE SurfaceBind, DImport #-} -- !!! THIS IS GOING TO BITE YOU !!!
 
 type Parser = Parsec Void [Lexeme SourcePos]
 
@@ -65,7 +68,7 @@ decl pub = let_ <|> import_
       eq ← token (TOp "=")
       let ret = fromMaybe (eq :< Hole) mret
       b@(Loc _ end) ← block
-      pure $ DBind (beg <> end) s i as ret b
+      pure $ SurfaceBind (beg <> end) s i _ as ret b
 
     import_ = do
       (sc, ms, is) ← try do
