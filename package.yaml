@@ -71,6 +71,7 @@ default-extensions:
 - OverloadedLabels
 - OverloadedLists
 - OverloadedStrings
+- PatternSynonyms
 - RankNTypes
 - RecordWildCards
 - ScopedTypeVariables

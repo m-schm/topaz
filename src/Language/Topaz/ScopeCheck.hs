@@ -16,10 +16,19 @@ type instance TTGLam 'ScopeChecked = Loc (Arg 'ScopeChecked)
 type instance TTGX 'ScopeChecked = Void
 
 data NameSource = Imported ModulePath | Local
+data WithFixity a = WithFixity (Maybe Word) (Maybe Fixity) a
+  deriving (Functor, Foldable, Traversable)
+data Fixity = Infixl | Infixr
+
+pattern Unknown ∷ a → WithFixity a
+pattern Unknown a = WithFixity Nothing Nothing a
+
+unFixity ∷ WithFixity a → a
+unFixity (WithFixity _ _ a) = a
 
 data Env = Env
-  { unqualified ∷ Map Ident NameSource
-  , qualified ∷ Map ModulePath (Map Ident ModulePath)
+  { unqualified ∷ Map Ident (WithFixity NameSource)
+  , qualified ∷ Map ModulePath (Map Ident (WithFixity ModulePath))
   } deriving Generic
 
 instance Semigroup Env where
@@ -73,7 +82,7 @@ decl = \case
   DImport s i → pure (DImport s i) -- TODO: handle imports
   DBind s sc i () t b → do
     t' ← expr t
-    #unqualified . at i ?= Local
+    #unqualified . at i ?= Unknown Local
     DBind s sc i () t' <$> loc block b
 
 block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
@@ -89,21 +98,22 @@ expr = _unwrap %%~ \case
   Var i → Var <$> lookup i
   Rec → pure Rec
   Hole → pure Hole
+  X ops → _
 
 arg ∷ Arg 'Desugared → ChkM (Arg 'ScopeChecked)
 arg (Arg mi e) = do
   e' ← expr e
   whenJust mi \i →
-    #unqualified . at i ?= Local
+    #unqualified . at i ?= Unknown Local
   pure $ Arg mi e'
 arg (Implicit i e) = do
   e' ← expr e
-  #unqualified . at i ?= Local
+  #unqualified . at i ?= Unknown Local
   pure $ Implicit i e'
 arg (Instance mi e) = do
   e' ← expr e
   whenJust mi \i →
-    #unqualified . at i ?= Local
+    #unqualified . at i ?= Unknown Local
   pure $ Instance mi e'
 
 local ∷ ChkM a → ChkM a
@@ -114,14 +124,14 @@ local ma = push *> ma <* pop where
 lookup ∷ QIdent → ChkM KnownIdent
 lookup (QIdent mmp i) = ChkM $ case mmp of
   Nothing →
-    gets (firstOf $ folded . #unqualified . ix i) >>= \case
+    gets (firstOf $ folded . #unqualified . ix i . folded) >>= \case
       Nothing            → throw $ NoIdent mmp i
       Just Local         → pure $ LocalDef i
       Just (Imported mp) → pure $ Known mp i
   Just mp →
     gets (toListOf $ folded . #qualified . ix mp) >>= \case
       [] → throw $ NoQual mp
-      xs → case xs ^.. folded . ix i of
+      xs → case xs ^.. folded . ix i . folded of
         []  → throw $ NoIdent mmp i
         [p] → pure $ Known p i
         ps  → throw $ Ambiguous ps i
