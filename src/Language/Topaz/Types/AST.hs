@@ -29,13 +29,16 @@ data KnownIdent = LocalDef Ident | Known ModulePath Ident
 data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 
+data Ops a = End a | Binop a Text (Ops a)
+
 data Stage = Parsed | Desugared | ScopeChecked
 
 type TTGC (c ∷ Type → Constraint) n =
-  (c (TTGIdent n), c (TTGLam n), c (TTGArgs n))
+  (c (TTGIdent n), c (TTGLam n), c (TTGArgs n), c (TTGX n))
 
 type family TTGIdent (n ∷ Stage)
 type family TTGLam (n ∷ Stage)
+type family TTGX (n ∷ Stage)
 
 type Expr n = Cofree (ExprF n) Span
 
@@ -47,6 +50,7 @@ data ExprF (n ∷ Stage) r
   | Var (TTGIdent n)
   | Rec
   | Hole
+  | X (TTGX n)
   deriving (Functor, Foldable, Traversable)
 
 deriving instance (Show r, TTGC Show n) ⇒ Show (ExprF n r)

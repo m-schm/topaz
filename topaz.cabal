@@ -30,6 +30,7 @@ library
       Language.Topaz.Types.AST
       Language.Topaz.Types.Lexer
       Language.Topaz.Types.Literal
+      Language.Topaz.Types.Value
   other-modules:
       Paths_topaz
   hs-source-dirs:

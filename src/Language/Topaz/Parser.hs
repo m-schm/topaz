@@ -26,6 +26,7 @@ dbg _ x = x
 type instance TTGIdent 'Parsed = QIdent
 type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
 type instance TTGArgs 'Parsed = [Loc (Arg 'Parsed)]
+type instance TTGX 'Parsed = Ops (Expr 'Parsed)
 
 type Parser = Parsec Void [Lexeme SourcePos]
 
