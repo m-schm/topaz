@@ -17,8 +17,6 @@ It has / is planned to have:
 - easy JS FFI à la PureScript
 - tail call optimization
 - irrelevant argument erasure
-- type-case (requires the above)
-- linear/affine types (tentative)
 
 ## Motivation / Inspiration
 
