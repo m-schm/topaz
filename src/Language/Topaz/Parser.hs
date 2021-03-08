@@ -104,7 +104,7 @@ expr ∷ EqualsBehavior → Parser (Expr 'Parsed)
 expr eqb = dbg "expr" $ try (opExpr eqb) <|> expr' eqb
 
 expr' ∷ EqualsBehavior → Parser (Expr 'Parsed)
-expr' eqb = when' (eqb /= NoLambda) lam
+expr' eqb = dbg "expr'" $ when' (eqb /= NoLambda) lam
         <|> app eqb
   where
     lam = do
@@ -118,8 +118,9 @@ expr' eqb = when' (eqb /= NoLambda) lam
         :< Lam as ret body
 
 opExpr ∷ EqualsBehavior → Parser (Expr 'Parsed)
-opExpr eqb = mkOp
-  <$> some (liftA2 (,) (app eqb) op)
+opExpr eqb = dbg "opExpr" $
+  mkOp
+  <$> some (try $ liftA2 (,) (app eqb) op)
   <*> expr' eqb
   where
     op = satisfy ('o':|"perator") \case

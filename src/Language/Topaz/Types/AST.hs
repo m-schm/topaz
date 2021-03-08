@@ -29,7 +29,8 @@ data KnownIdent = LocalDef Ident | Known ModulePath Ident
 data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 
-data Ops a = End a | Binop a Text (Ops a)
+data Ops a = End a | Binop a (Loc Text) (Ops a)
+  deriving Show
 
 data Stage = Parsed | Desugared | ScopeChecked
 
@@ -66,6 +67,7 @@ instance TTGC Show n ⇒ Show1 (ExprF n) where
     Var v → showsPrec prec v
     Rec → showString "Rec"
     Hole → showString "Hole"
+    X a → showsPrec prec a
 
 type family TTGArgs (n ∷ Stage)
 
