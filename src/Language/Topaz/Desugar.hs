@@ -52,8 +52,13 @@ expr = _unwrap %~ \case
   X es → X (ops es)
 
 ops ∷ Ops (Expr 'Parsed) → Ops (Expr 'Desugared)
-ops (End e) = End (expr e)
-ops (Binop l o r) = Binop (expr l) o (ops r)
+ops = \case
+  Pfx o → Pfx (ops' o)
+  Ifx e o → Ifx (expr e) (ops' o)
+  where
+    ops' ∷ Ops' (Expr 'Parsed) → Ops' (Expr 'Desugared)
+    ops' (Binop os e xs) = Binop os (expr e) (ops' xs)
+    ops' Done = Done
 
 arg ∷ Arg 'Parsed → Arg 'Desugared
 arg (Arg mi t) = Arg mi (expr t)

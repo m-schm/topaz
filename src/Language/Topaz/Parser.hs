@@ -10,7 +10,7 @@ import Control.Comonad.Cofree hiding (_unwrap)
 import Control.Lens hiding ((:<), op)
 import qualified Data.Set as S
 import Relude hiding (All, many, some)
-import Relude.Extra (foldl1')
+import Relude.Extra (foldMap1, foldl1')
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec hiding (Token, token, some, sepBy1, satisfy)
 
@@ -68,7 +68,7 @@ decl pub = let_ <|> import_
       eq ← token (TOp "=")
       let ret = fromMaybe (eq :< Hole) mret
       b@(Loc _ end) ← block
-      pure $ SurfaceBind (beg <> end) s i _ as ret b
+      pure $ SurfaceBind (beg <> end) s i (FixityPrec Nothing Nothing) as ret b
 
     import_ = do
       (sc, ms, is) ← try do
@@ -123,18 +123,17 @@ expr' eqb = dbg "expr'" $ when' (eqb /= NoLambda) lam
 opExpr ∷ EqualsBehavior → Parser (Expr 'Parsed)
 opExpr eqb = dbg "opExpr" $
   mkOp
-  <$> some (try $ liftA2 (,) (app eqb) op)
-  <*> expr' eqb
+  <$> optional (app eqb)
+  <*> some (try $ liftA2 (,) (some op) (app eqb))
   where
     op = satisfy ('o':|"perator") \case
       TOp t → Just t
       _     → Nothing
 
-    mkOp ∷ NonEmpty (Expr 'Parsed, Loc Text) → Expr 'Parsed → Expr 'Parsed
-    mkOp xs e =
-      let (s, o) = foldr buildBinop (extract e, End e) xs
-      in s :< X o
-    buildBinop (l, o) (s, r) = (s <> extract l, Binop l o r)
+    mkOp ∷ Maybe (Expr 'Parsed) → NonEmpty (NonEmpty (Loc Text), Expr 'Parsed) → Expr 'Parsed
+    mkOp ml xs = s :< X (maybe Pfx Ifx ml xs') where
+      s = maybe id ((<>) . extract) ml $ foldMap1 (extract . snd) xs
+      xs' = foldr (uncurry Binop) Done xs
 
 app ∷ EqualsBehavior → Parser (Expr 'Parsed)
 app eqb = foldl1' (.$) <$> some (expr1 eqb) where

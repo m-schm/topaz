@@ -29,7 +29,14 @@ data KnownIdent = LocalDef Ident | Known ModulePath Ident
 data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 
-data Ops a = End a | Binop a (Loc Text) (Ops a)
+data Ops a
+  = Pfx (Ops' a)
+  | Ifx a (Ops' a)
+  deriving Show
+
+data Ops' a
+  = Binop (NonEmpty (Loc Text)) a (Ops' a)
+  | Done
   deriving Show
 
 data Stage = Parsed | Desugared | ScopeChecked
