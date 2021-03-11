@@ -137,7 +137,7 @@ literal = label "literal" $
              ds ← some digitChar
              frac s1 ds <|> pure (LInt . s2 $ Unsafe.read ds)
   <|> LStr . T.pack <$ char '"' <*> many (strChar '"') <* char '"'
-  <|> LChar <$ char '\'' <*> strChar '\'' <* char '\''
+  <|> try (LChar <$ char '\'' <*> strChar '\'' <* char '\'')
   where
     -- impredicative polymorphism when
     sign ∷ (Num a, Num b) ⇒ Parser (a → a, b → b)
