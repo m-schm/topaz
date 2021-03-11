@@ -60,6 +60,7 @@ data ExprF (n ∷ Stage) r
   | r :$ r
   | r :$@ r
   | Lam (TTGLam n) r (Loc (Block n))
+  | Pi (TTGLam n) r (Loc (Block n))
   | Var (TTGIdent n)
   | Rec
   | Hole
@@ -75,6 +76,9 @@ instance TTGC Show n ⇒ Show1 (ExprF n) where
     f :$@ x → showsPrec' 10 f . showString " :$@ " . showsPrec' 10 x
     Lam as ret b →
       showString "Lam " . showsPrec 10 as . showString " " .
+      showsPrec' 10 ret . showString " " . showsPrec 10 b
+    Pi as ret b →
+      showString "Pi " . showsPrec 10 as . showString " " .
       showsPrec' 10 ret . showString " " . showsPrec 10 b
     Var v → showsPrec prec v
     Rec → showString "Rec"
