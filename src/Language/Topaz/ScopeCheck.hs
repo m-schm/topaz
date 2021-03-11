@@ -13,7 +13,7 @@ import Relude hiding (local)
 type instance TTGIdent 'ScopeChecked = KnownIdent
 type instance TTGDecl 'ScopeChecked = ()
 type instance TTGLam 'ScopeChecked = Loc (Arg 'ScopeChecked)
-type instance TTGX 'ScopeChecked = Void
+type instance ExprX 'ScopeChecked = Void
 
 data NameSource = Imported ModulePath | Local
 data WithFixity a = WithFixity FixityPrec a

@@ -10,7 +10,7 @@ import Relude
 type instance TTGIdent 'Desugared = QIdent
 type instance TTGDecl 'Desugared = FixityPrec
 type instance TTGLam 'Desugared = Loc (Arg 'Desugared)
-type instance TTGX 'Desugared = Ops (Expr 'Desugared)
+type instance ExprX 'Desugared = Ops (Expr 'Desugared)
 
 desugar ∷ TopLevel 'Parsed → TopLevel 'Desugared
 desugar (TopLevel mp ds me) = TopLevel mp (fmap decl ds) (fmap expr me)

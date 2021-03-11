@@ -25,7 +25,7 @@ dbg _ x = x
 
 type instance TTGIdent 'Parsed = QIdent
 type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
-type instance TTGX 'Parsed = Ops (Expr 'Parsed)
+type instance ExprX 'Parsed = Ops (Expr 'Parsed)
 type instance TTGDecl 'Parsed = (FixityPrec, [Loc (Arg 'Parsed)])
 
 pattern SurfaceBind sp sc i f a e b = DBind sp sc i e b (f, a)

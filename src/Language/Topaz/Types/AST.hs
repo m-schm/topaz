@@ -42,11 +42,16 @@ data Ops' a
 data Stage = Parsed | Desugared | ScopeChecked
 
 type TTGC (c ∷ Type → Constraint) n =
-  (c (TTGIdent n), c (TTGLam n), c (TTGDecl n), c (TTGX n))
+  ( c (TTGIdent n), c (TTGLam n), c (ExprX n)
+  , c (PatX n)
+  , c (TTGDecl n)
+  )
 
 type family TTGIdent (n ∷ Stage)
 type family TTGLam (n ∷ Stage)
-type family TTGX (n ∷ Stage)
+type family TTGDecl (n ∷ Stage)
+type family ExprX (n ∷ Stage)
+type family PatX (n ∷ Stage)
 
 type Expr n = Cofree (ExprF n) Span
 
@@ -58,7 +63,7 @@ data ExprF (n ∷ Stage) r
   | Var (TTGIdent n)
   | Rec
   | Hole
-  | X (TTGX n)
+  | X (ExprX n)
   deriving (Functor, Foldable, Traversable)
 
 deriving instance (Show r, TTGC Show n) ⇒ Show (ExprF n r)
@@ -76,8 +81,6 @@ instance TTGC Show n ⇒ Show1 (ExprF n) where
     Hole → showString "Hole"
     X a → showsPrec prec a
 
-type family TTGDecl (n ∷ Stage)
-
 data Decl (n ∷ Stage) a
   = DImport Span Import
   | DBind Span (Scope a) Ident (Expr n) (Loc (Block n)) (TTGDecl n)
@@ -90,6 +93,16 @@ data Arg (n ∷ Stage)
   | Instance (Maybe Ident) (Expr n)
 
 deriving instance TTGC Show n ⇒ Show (Arg n)
+
+data Pattern (n ∷ Stage)
+  = PVar Ident
+  | PHole
+  | PTup (AtLeastTwo (Pattern n))
+  | PCtor (TTGIdent n) [Pattern n]
+  | PX (PatX n)
+
+data AtLeastTwo a = AtLeastTwo a (NonEmpty a)
+  deriving (Functor, Foldable, Traversable)
 
 data Scope a where
   Local  ∷ Scope a
