@@ -1,6 +1,7 @@
 module Language.Topaz.Types.Lexer
-  ( Token(..), AbsIndent(..), Lexeme(..)
-  , unLexeme
+  ( Token(..), pattern TEquals
+  , AbsIndent(..)
+  , Lexeme(..), unLexeme
   , Literal(..)
   ) where
 import Relude
@@ -33,6 +34,9 @@ data Token
   | TIndent | TDedent | TSemicolon | TNewline
   | TLit Literal
   deriving (Eq, Ord, Show)
+
+pattern TEquals :: Token
+pattern TEquals = TOp "="
 
 data AbsIndent = AbsIndent { tabs ∷ Int, spcs ∷ Int }
   deriving (Eq, Ord, Show)

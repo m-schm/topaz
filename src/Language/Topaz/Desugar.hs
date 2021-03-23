@@ -1,16 +1,17 @@
 module Language.Topaz.Desugar (desugar) where
 
-import Language.Topaz.Parser (pattern SurfaceBind)
+import Language.Topaz.Parser (pattern SurfaceFn)
 import Language.Topaz.Types.AST
+import Language.Topaz.Types.Cofree
 
-import Control.Comonad.Cofree (unwrap, Cofree(..))
 import Control.Lens hiding ((:<))
 import Relude
 
 type instance TTGIdent 'Desugared = QIdent
-type instance TTGDecl 'Desugared = FixityPrec
+type instance TTGArgs 'Desugared = FixityPrec
 type instance TTGLam 'Desugared = Loc (Arg 'Desugared)
 type instance ExprX 'Desugared = Ops (Expr 'Desugared)
+type instance PatX 'Desugared = Ops (Pattern 'Desugared)
 
 desugar ∷ TopLevel 'Parsed → TopLevel 'Desugared
 desugar (TopLevel mp ds me) = TopLevel mp (fmap decl ds) (fmap expr me)
@@ -20,10 +21,10 @@ block (Block ds e) = Block (fmap decl ds) (expr e)
 
 decl ∷ Decl 'Parsed a → Decl 'Desugared a
 decl (DImport s i) = DImport s i
-decl (SurfaceBind s sc i f as t b) =
+decl (SurfaceFn s sc i f as t b) =
   let as' = as & mapped . loc %~ arg
       (t', b') = flattenArgs as' (expr t, over loc block b)
-  in DBind s sc i t' b' f
+  in DBindFn s sc i t' b' f
 
 flattenArgs ∷ [Loc (Arg 'Desugared)]
   → (Expr 'Desugared, Loc (Block 'Desugared))
@@ -49,21 +50,32 @@ expr = _unwrap %~ \case
   Var v → Var v
   Rec → Rec
   Hole → Hole
-  X es → X (ops es)
+  X es → X (ops expr es)
 
-ops ∷ Ops (Expr 'Parsed) → Ops (Expr 'Desugared)
-ops = \case
+ops ∷ ∀ a b. (a → b) → Ops a → Ops b
+ops f = \case
   Pfx o → Pfx (ops' o)
-  Ifx e o → Ifx (expr e) (ops' o)
+  Ifx e o → Ifx (f e) (ops' o)
   where
-    ops' ∷ Ops' (Expr 'Parsed) → Ops' (Expr 'Desugared)
-    ops' (Binop os e xs) = Binop os (expr e) (ops' xs)
+    ops' ∷ Ops' a → Ops' b
+    ops' (Binop os e xs) = Binop os (f e) (ops' xs)
     ops' Done = Done
 
 arg ∷ Arg 'Parsed → Arg 'Desugared
-arg (Arg mi t) = Arg mi (expr t)
-arg (Implicit i t) = Implicit i (expr t)
-arg (Instance mi t) = Instance mi (expr t)
+arg (Arg t ty) = case t of
+  Visible pat  → Arg (Visible (pattern_ pat)) (expr ty)
+  Implicit pat → Arg (Implicit (pattern_ pat)) (expr ty)
+  Instance     → Arg Instance (expr ty)
+
+pattern_ ∷ Pattern 'Parsed → Pattern 'Desugared
+pattern_ = _unwrap %~ \case
+  PVar fp n → PVar fp n
+  PHole → PHole
+  PTup ps → PTup (fmap pattern_ ps)
+  PCtor c ps → PCtor c $ fmap pattern_ ps
+  PAnnot p t → PAnnot (pattern_ p) (expr t)
+  p :@ p' → pattern_ p :@ pattern_ p'
+  PX ps → PX (ops pattern_ ps)
 
 flattenLam ∷ NonEmpty (Loc (Arg 'Desugared))
   → Expr 'Desugared

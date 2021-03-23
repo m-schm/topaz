@@ -2,15 +2,14 @@
 module Language.Topaz.Parser where
 
 import Language.Topaz.Types.AST
-import Language.Topaz.Types.Lexer (Lexeme(..), Token(..))
+import Language.Topaz.Types.Cofree
+import Language.Topaz.Types.Lexer (pattern TEquals, Lexeme(..), Token(..))
 
 import Control.Applicative.Combinators.NonEmpty
-import Control.Comonad
-import Control.Comonad.Cofree hiding (_unwrap)
 import Control.Lens hiding ((:<), op)
 import qualified Data.Set as S
 import Relude hiding (All, many, some)
-import Relude.Extra (foldMap1, foldl1')
+import Relude.Extra (foldMap1, foldl1', fold1)
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec hiding (Token, token, some, sepBy1, satisfy)
 
@@ -25,11 +24,12 @@ dbg _ x = x
 
 type instance TTGIdent 'Parsed = QIdent
 type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
+type instance TTGArgs 'Parsed = (FixityPrec, [Loc (Arg 'Parsed)])
 type instance ExprX 'Parsed = Ops (Expr 'Parsed)
-type instance TTGDecl 'Parsed = (FixityPrec, [Loc (Arg 'Parsed)])
+type instance PatX 'Parsed = Ops (Pattern 'Parsed)
 
-pattern SurfaceBind sp sc i f a e b = DBind sp sc i e b (f, a)
-{-# COMPLETE SurfaceBind, DImport #-} -- !!! THIS IS GOING TO BITE YOU !!!
+pattern SurfaceFn sp sc i f a e b = DBindFn sp sc i e b (f, a)
+{-# COMPLETE SurfaceFn, DImport #-} -- !!! THIS IS GOING TO BITE YOU !!!
 
 type Parser = Parsec Void [Lexeme SourcePos]
 
@@ -60,49 +60,83 @@ decl ∷ Parser (Loc (Scope a)) → Parser (Decl 'Parsed a)
 decl pub = let_ <|> import_
   where
 
-    let_ = do
-      Loc s beg ← pub <|> (Loc Local <$> token TLet)
-      Loc i _ ← ident
+    let_ = (pub <|> fmap (Loc Local) (token TLet))
+      >>= \h → letVal h <|> letFn h
+
+    letVal (Loc sc beg) = do
+      pat ← try $ pattern1 <* lookAhead (token TColon <|> token TEquals)
+      mty ← optional $ token TColon *> expr NoEquals
+      eq ← token TEquals
+      let ty = fromMaybe (eq :< Hole) mty
+      b@(Loc _ end) ← block
+      pure $ DBind (beg <> end) sc pat ty b
+
+    letFn (Loc sc beg) = do
+      i ← ident
       as ← many arg
       mret ← optional $ token TColon *> expr NoEquals
-      eq ← token (TOp "=")
+      eq ← token TEquals
       let ret = fromMaybe (eq :< Hole) mret
       b@(Loc _ end) ← block
-      pure $ SurfaceBind (beg <> end) s i (FixityPrec Nothing Nothing) as ret b
+      pure $ SurfaceFn (beg <> end) sc i (FixityPrec Nothing Nothing) as ret b
 
     import_ = do
-      (sc, ms, is) ← try do
-        (sc, ms) ← option (False, Nothing) $
-          (True ,) . Just . view locSpan <$> pub
-        (sc, ms, ) <$> token TImport
+      (ms, is) ← try $ (,)
+        <$> optional (view locSpan <$> pub)
+        <*> token TImport
       undefined
 
 arg ∷ Parser (Loc (Arg 'Parsed))
-arg = (\(Loc i s) → Loc (Arg i (s :< Hole)) s) <$> bare
-  <|> parens explicit
-  <|> braces implicit
+arg = arg' Visible
+  <|> (locSpan <>~) <$> token TAt <*> arg' Implicit
   <|> brackets instance_
   where
-    bare = over loc Just <$> ident
-       <|> Loc Nothing <$> token THole
-
-    explicit = do
-      Loc i s ← bare
-      ty ← option (s :< Hole) $ token TColon *> expr AnythingGoes
-      pure $ Loc (Arg i ty) (s <> extract ty)
-
-    implicit = do
-      Loc i s ← ident
-      ty ← option (s :< Hole) $ token TColon *> expr AnythingGoes
-      pure $ Loc (Implicit i ty) (s <> extract ty)
+    arg' t = do
+        pat ← pattern1
+        let s = extract pat
+        pure $ Loc (Arg (t pat) (s :< Hole)) s
+      <|> parens do
+        pat ← pattern_
+        ty ← option (extract pat :< Hole) $
+          token TColon *> expr AnythingGoes
+        pure $ Loc (Arg (t pat) ty) (extract pat <> extract ty)
 
     instance_ = do
-      name ← optional (ident <* token TColon)
       ty ← expr AnythingGoes
-      let s = maybe id ((<>) . view locSpan) name
-      pure $ Loc (Instance (fmap unLoc name) ty) (s $ extract ty)
+      pure $ Loc (Arg Instance ty) (extract ty)
 
--- TODO: operators
+data ColonBehavior = AnnotsOk | NoAnnots
+  deriving Eq
+
+pattern_ ∷ Parser (Pattern 'Parsed)
+pattern_ = dbg "pattern_" $ label "pattern" do
+  p ← pattern'
+  optional (token TColon *> expr AnythingGoes)
+    <&> maybe p (onCofree PAnnot p)
+
+pattern' ∷ Parser (Pattern 'Parsed)
+pattern' = dbg "pattern'" do
+      liftA2 mkCtor qident1 (many pattern1)
+  <|> try (liftA2 mkCtor' qident (some pattern1))
+  <|> mkTuple
+    <$> try (token TParenL *> pattern_ <* lookAhead (token TComma))
+    <*> some (token TComma *> pattern_)
+    <*  token TParenR
+  <|> pattern1
+  where
+    mkCtor (Loc c s) as = fold1 (s :| fmap extract as) :< PCtor c as
+    mkCtor' (Loc c s) as = (s <> extract (last as)) :< PCtor c (toList as)
+    mkTuple p ps = (extract p <> extract (last ps)) :< PTup (AtLeastTwo p ps)
+
+pattern1 ∷ Parser (Pattern 'Parsed)
+pattern1 = (:< PHole) <$> token THole
+       <|> liftC (flip PCtor []) <$> qident1
+       <|> (\fp i@(Loc _ s) → s :< PVar fp i) <$> fixityPrec <*> ident
+       <|> parens pattern_
+
+fixityPrec ∷ Parser FixityPrec
+fixityPrec = pure $ FixityPrec Nothing Nothing
+
 expr ∷ EqualsBehavior → Parser (Expr 'Parsed)
 expr eqb = dbg "expr" $ try (opExpr eqb) <|> expr' eqb
 
@@ -111,10 +145,10 @@ expr' eqb = dbg "expr'" $ when' (eqb /= NoLambda) lam
         <|> app eqb
   where
     lam = do
-      (as, mret, s) ← try $ liftA3 (,,)
-        (some arg)
-        (optional $ token TColon *> expr NoLambda)
-        (token TArrowR')
+      (as, mret, s) ← try $ (,,)
+        <$> some arg
+        <*> optional (token TColon *> expr NoLambda)
+        <*> token TArrowR'
       let ret = fromMaybe (s :< Hole) mret
       body@(Loc _ bs) ← block
       pure $ (view locSpan (head as) <> bs)
@@ -130,34 +164,44 @@ opExpr eqb = dbg "opExpr" $
       TOp t → Just t
       _     → Nothing
 
-    mkOp ∷ Maybe (Expr 'Parsed) → NonEmpty (NonEmpty (Loc Text), Expr 'Parsed) → Expr 'Parsed
+    mkOp ∷
+      Maybe (Expr 'Parsed)
+      → NonEmpty (NonEmpty (Loc Text), Expr 'Parsed)
+      → Expr 'Parsed
     mkOp ml xs = s :< X (maybe Pfx Ifx ml xs') where
       s = maybe id ((<>) . extract) ml $ foldMap1 (extract . snd) xs
       xs' = foldr (uncurry Binop) Done xs
 
 app ∷ EqualsBehavior → Parser (Expr 'Parsed)
-app eqb = foldl1' (.$) <$> some (expr1 eqb) where
-  f .$ x = (extract f <> extract x) :< (f :$ x)
+app eqb = foldl1' (onCofree (:$)) <$> some (expr1 eqb) where
 
 expr1 ∷ EqualsBehavior → Parser (Expr 'Parsed)
 expr1 eqb = dbg "expr1" $
-      var
-  <|> (\(Loc e s) → s :< e) <$> literal
+      (:< Hole) <$> token THole
+  <|> var
+  <|> liftC id <$> literal
   <|> parens (expr eqb)
   where
-
     var ∷ Parser (Expr 'Parsed)
-    var = do
-      path ← pathPart `endBy'` token TPeriod
-      Loc name end ← ident
-      let mp = viaNonEmpty ModulePath $ fmap unLoc path
-          beg = path ^? _head . locSpan
-      pure $ maybe id (<>) beg end :< Var (QIdent mp name)
+    var = liftC Var <$> qident
 
     literal = satisfy ('l':|"iteral") \case
       TLit l → Just $ Lit l
       _      → Nothing
 
+qident ∷ Parser (Loc QIdent)
+qident = qident' $ pathPart `tryEndBy` token TPeriod
+
+qident1 ∷ Parser (Loc QIdent)
+qident1 = qident' $ fmap toList $ pathPart `tryEndBy1` token TPeriod
+
+qident' ∷ Parser [Loc Text] → Parser (Loc QIdent)
+qident' ppath = do
+  path ← ppath
+  Loc name end ← ident
+  let mp = viaNonEmpty ModulePath $ fmap unLoc path
+      beg = path ^? _head . locSpan
+  pure $ Loc (QIdent mp name) (maybe id (<>) beg end)
 
 satisfy ∷ NonEmpty Char → (Token → Maybe a) → Parser (Loc a)
 satisfy = satisfy' . S.singleton . Label
@@ -219,6 +263,24 @@ unMaybe ∷ MonadPlus f ⇒ f (Maybe a) → f a
 unMaybe = (>>= maybe empty pure)
 {-# INLINE unMaybe #-}
 
-endBy' ∷ Parser a → Parser sep → Parser [a]
-endBy' p sep = many $ try (p >>= \x → x <$ sep)
-{-# INLINE endBy' #-}
+tryEndBy ∷ Parser a → Parser sep → Parser [a]
+tryEndBy p sep = many $ try (p <* sep)
+{-# INLINE tryEndBy #-}
+
+tryEndBy1 ∷ Parser a → Parser sep → Parser (NonEmpty a)
+tryEndBy1 p sep = some $ try (p <* sep)
+{-# INLINE tryEndBy1 #-}
+
+uncurryLoc ∷ (a → Span → c) → Loc a → c
+uncurryLoc f = \(Loc x s) → f x s
+{-# INLINE uncurryLoc #-}
+
+onCofree ∷ Semigroup a ⇒
+  (Cofree f a → Cofree g a → h (Cofree h a))
+  → Cofree f a → Cofree g a → Cofree h a
+onCofree f = \x@(s :< _) y@(s' :< _) → (s <> s') :< f x y
+{-# INLINE onCofree #-}
+
+liftC ∷ (a → f (Cofree f Span)) → Loc a → Cofree f Span
+liftC f = \(Loc x s) → s :< f x
+{-# INLINE liftC #-}

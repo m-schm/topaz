@@ -72,6 +72,7 @@ default-extensions:
 - OverloadedLists
 - OverloadedStrings
 - PatternSynonyms
+- QuantifiedConstraints
 - RankNTypes
 - RecordWildCards
 - ScopedTypeVariables
