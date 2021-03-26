@@ -99,8 +99,21 @@ decl (Decl s sc d) = Decl s sc <$> case d of
     b' ← b & loc %%~ block
     pure $ DBind p' t' b'
   DMutual ds → undefined
-  DRecord i ty c → undefined
-  DData i ty cs → undefined
+  DRecord i t c → undefined
+  DData i t cs → undefined
+
+ctor ∷ Ctor 'Desugared a → ChkM (Ctor 'ScopeChecked a)
+ctor (Ctor s sc mi fs) = do
+  fs' ← local $ traverse field fs
+  whenJust mi \(fp, Loc i s') →
+    #unqualified . at i ?= NameInfo fp NotCtor s' Local
+  pure $ Ctor s sc mi fs'
+
+field ∷ Field 'Desugared → ChkM (Field 'ScopeChecked)
+field (Field t mi ty) = do
+  whenJust mi \(fp, Loc i s') →
+    #unqualified . at i ?= NameInfo fp NotCtor s' Local
+  Field t mi <$> expr ty
 
 block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
 block (Block ds e) = local $ liftA2 Block (traverse decl ds) (expr e)

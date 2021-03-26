@@ -87,10 +87,12 @@ data Decl' (n ∷ Stage) a
   | DData (Loc Ident) (Expr n) [Ctor n a]
 deriving instance TTGC Show n ⇒ Show (Decl' n a)
 
-data Ctor (n ∷ Stage) a = Ctor Span (Scope a) (Loc Ident) [Field n]
+data Ctor (n ∷ Stage) a =
+  Ctor Span (Scope a) (Maybe (FixityPrec, Loc Ident)) [Field n]
 deriving instance TTGC Show n ⇒ Show (Ctor n a)
 
-data Field (n ∷ Stage) = Field ArgType (Loc Ident) (Expr n)
+data Field (n ∷ Stage) =
+  Field ArgType (Maybe (FixityPrec, Loc Ident)) (Expr n)
 deriving instance TTGC Show n ⇒ Show (Field n)
 
 data Arg (n ∷ Stage) = Arg ArgType (Pattern n) (Expr n)
