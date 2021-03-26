@@ -6,7 +6,7 @@ import Language.Topaz.Desugar ()
 import Language.Topaz.Types.AST hiding (Local)
 import Language.Topaz.Types.Cofree
 
-import Control.Lens
+import Control.Lens hiding ((:<))
 import Data.Generics.Labels ()
 import qualified Data.List.NonEmpty as NE
 import Data.Traversable
@@ -14,14 +14,14 @@ import Relude hiding (local)
 import Language.Topaz.Utils
 
 type instance TTGIdent 'ScopeChecked = KnownIdent
-type instance TTGArgs 'ScopeChecked = ()
+type instance TTGArgs 'ScopeChecked = Void
 type instance TTGLam 'ScopeChecked = Loc (Arg 'ScopeChecked)
 type instance ExprX 'ScopeChecked = Void
 type instance PatX 'ScopeChecked = Void
 
 data NameSource = Imported ModulePath | Local
 
-data Arity = NotCtor | Ctor Word
+data Arity = NotCtor | IsCtor Word
 
 data NameInfo a = NameInfo
   { fixity ∷ FixityPrec
@@ -86,18 +86,21 @@ scopeCheck (TopLevel mp ds me) =
       Err es → Left es
 
 decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeChecked a)
-decl = \case
-  DImport s i → pure (DImport s i) -- TODO: handle imports
-  DBindFn s sc i@(Loc i' s') t b f → do
+decl (Decl s sc d) = Decl s sc <$> case d of
+  DImport i → pure (DImport i) -- TODO: handle imports
+  DBindFn li@(Loc i s') t b f → do
     t' ← expr t
-    #unqualified . at i' ?= NameInfo f NotCtor s' Local
-    b' ← loc block b
-    pure $ DBindFn s sc i t' b' ()
-  DBind s sc p t b → do
+    #unqualified . at i ?= NameInfo f NotCtor s' Local
+    b' ← b & loc %%~ block
+    pure $ DBind (s' :< PVar f li) t' b'
+  DBind p t b → do
     t' ← expr t
     p' ← pattern_ p
-    b' ← loc block b
-    pure $ DBind s sc p' t' b'
+    b' ← b & loc %%~ block
+    pure $ DBind p' t' b'
+  DMutual ds → undefined
+  DRecord i ty c → undefined
+  DData i ty cs → undefined
 
 block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
 block (Block ds e) = local $ liftA2 Block (traverse decl ds) (expr e)
@@ -120,12 +123,10 @@ expr = _unwrap %%~ \case
   X ops → undefined
 
 arg ∷ Arg 'Desugared → ChkM (Arg 'ScopeChecked)
-arg (Arg t ty) = do
+arg (Arg t p ty) = do
   ty' ← expr ty
-  case t of
-    Visible pat  → do pat' ← pattern_ pat; pure $ Arg (Visible pat') ty'
-    Implicit pat → do pat' ← pattern_ pat; pure $ Arg (Implicit pat') ty'
-    Instance     → pure $ Arg Instance ty'
+  p' ← pattern_ p
+  pure $ Arg t p' ty'
 
 pattern_ ∷ Pattern 'Desugared → ChkM (Pattern 'ScopeChecked)
 pattern_ = _unwrap %%~ \case
@@ -183,7 +184,7 @@ lookupArity qi = do
   ni ← lookup qi
   case arity ni of
     NotCtor → throw $ NotACtor qi
-    Ctor a  → pure (ni, a)
+    IsCtor a  → pure (ni, a)
 
 throw ∷ ScopeError → ChkM a
 throw = ChkM . throw'

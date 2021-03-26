@@ -75,17 +75,28 @@ data ExprF (n ∷ Stage) r
 
 deriving instance (Show r, Show (Pattern n), TTGC Show n) ⇒ Show (ExprF n r)
 
-data Decl (n ∷ Stage) a
-  = DImport Span Import
-  | DBindFn Span (Scope a) (Loc Ident) (Expr n) (Loc (Block n)) (TTGArgs n)
-  | DBind Span (Scope a) (Pattern n) (Expr n) (Loc (Block n))
-
+data Decl (n ∷ Stage) a = Decl Span (Scope a) (Decl' n a)
 deriving instance TTGC Show n ⇒ Show (Decl n a)
 
-data Arg (n ∷ Stage) = Arg (ArgType (Pattern n)) (Expr n)
+data Decl' (n ∷ Stage) a
+  = DImport Import
+  | DBindFn (Loc Ident) (Expr n) (Loc (Block n)) (TTGArgs n)
+  | DBind (Pattern n) (Expr n) (Loc (Block n))
+  | DMutual [Decl n a]
+  | DRecord (Loc Ident) (Expr n) (Ctor n a)
+  | DData (Loc Ident) (Expr n) [Ctor n a]
+deriving instance TTGC Show n ⇒ Show (Decl' n a)
+
+data Ctor (n ∷ Stage) a = Ctor Span (Scope a) (Loc Ident) [Field n]
+deriving instance TTGC Show n ⇒ Show (Ctor n a)
+
+data Field (n ∷ Stage) = Field ArgType (Loc Ident) (Expr n)
+deriving instance TTGC Show n ⇒ Show (Field n)
+
+data Arg (n ∷ Stage) = Arg ArgType (Pattern n) (Expr n)
 deriving instance TTGC Show n ⇒ Show (Arg n)
 
-data ArgType a = Visible a | Implicit a | Instance
+data ArgType = Visible | Implicit | Instance
   deriving Show
 
 type Pattern n = Cofree (PatternF n) Span

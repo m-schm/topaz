@@ -28,9 +28,6 @@ type instance TTGArgs 'Parsed = (FixityPrec, [Loc (Arg 'Parsed)])
 type instance ExprX 'Parsed = Ops (Expr 'Parsed)
 type instance PatX 'Parsed = Ops (Pattern 'Parsed)
 
-pattern SurfaceFn sp sc i f a e b = DBindFn sp sc i e b (f, a)
-{-# COMPLETE SurfaceFn, DImport #-} -- !!! THIS IS GOING TO BITE YOU !!!
-
 type Parser = Parsec Void [Lexeme SourcePos]
 
 topLevel ∷ ModulePath → Parser (TopLevel 'Parsed)
@@ -69,7 +66,7 @@ decl pub = let_ <|> import_
       eq ← token TEquals
       let ty = fromMaybe (eq :< Hole) mty
       b@(Loc _ end) ← block
-      pure $ DBind (beg <> end) sc pat ty b
+      pure $ Decl (beg <> end) sc $ DBind pat ty b
 
     letFn (Loc sc beg) = do
       i ← ident
@@ -78,7 +75,8 @@ decl pub = let_ <|> import_
       eq ← token TEquals
       let ret = fromMaybe (eq :< Hole) mret
       b@(Loc _ end) ← block
-      pure $ SurfaceFn (beg <> end) sc i (FixityPrec Nothing Nothing) as ret b
+      pure $ Decl (beg <> end) sc $
+        DBindFn i ret b (FixityPrec Nothing Nothing, as)
 
     import_ = do
       (ms, is) ← try $ (,)
@@ -94,16 +92,17 @@ arg = arg' Visible
     arg' t = do
         pat ← pattern1
         let s = extract pat
-        pure $ Loc (Arg (t pat) (s :< Hole)) s
+        pure $ Loc (Arg t pat (s :< Hole)) s
       <|> parens do
         pat ← pattern_
         ty ← option (extract pat :< Hole) $
           token TColon *> expr AnythingGoes
-        pure $ Loc (Arg (t pat) ty) (extract pat <> extract ty)
+        pure $ Loc (Arg t pat ty) (extract pat <> extract ty)
 
     instance_ = do
-      ty ← expr AnythingGoes
-      pure $ Loc (Arg Instance ty) (extract ty)
+      pat ← pattern_
+      ty ← token TColon *> expr AnythingGoes
+      pure $ Loc (Arg Instance pat ty) (extract ty)
 
 data ColonBehavior = AnnotsOk | NoAnnots
   deriving Eq

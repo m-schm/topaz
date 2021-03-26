@@ -1,6 +1,6 @@
 module Language.Topaz.Desugar (desugar) where
 
-import Language.Topaz.Parser (pattern SurfaceFn)
+import Language.Topaz.Parser ()
 import Language.Topaz.Types.AST
 import Language.Topaz.Types.Cofree
 
@@ -20,11 +20,16 @@ block ∷ Block 'Parsed → Block 'Desugared
 block (Block ds e) = Block (fmap decl ds) (expr e)
 
 decl ∷ Decl 'Parsed a → Decl 'Desugared a
-decl (DImport s i) = DImport s i
-decl (SurfaceFn s sc i f as t b) =
-  let as' = as & mapped . loc %~ arg
-      (t', b') = flattenArgs as' (expr t, over loc block b)
-  in DBindFn s sc i t' b' f
+decl (Decl s sc d) = Decl s sc $ case d of
+  DImport i → DImport i -- TODO: modules
+  DBindFn i t b (f, as) →
+    let as' = as & mapped . loc %~ arg
+        (t', b') = flattenArgs as' (expr t, over loc block b)
+    in DBindFn i t' b' f
+  DBind pat ty b → undefined
+  DMutual ds → undefined
+  DRecord i ty c → undefined
+  DData i ty cs → undefined
 
 flattenArgs ∷ [Loc (Arg 'Desugared)]
   → (Expr 'Desugared, Loc (Block 'Desugared))
@@ -62,10 +67,7 @@ ops f = \case
     ops' Done = Done
 
 arg ∷ Arg 'Parsed → Arg 'Desugared
-arg (Arg t ty) = case t of
-  Visible pat  → Arg (Visible (pattern_ pat)) (expr ty)
-  Implicit pat → Arg (Implicit (pattern_ pat)) (expr ty)
-  Instance     → Arg Instance (expr ty)
+arg (Arg t pat ty) = Arg t (pattern_ pat) (expr ty)
 
 pattern_ ∷ Pattern 'Parsed → Pattern 'Desugared
 pattern_ = _unwrap %~ \case
