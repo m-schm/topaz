@@ -84,7 +84,7 @@ data Decl' (n ∷ Stage) a
   | DBind (Pattern n) (Expr n) (Loc (Block n))
   | DMutual [Decl n a]
   | DRecord IdentBind (Expr n) (Ctor n a)
-  | DData IdentBind (Expr n) [Ctor n a]
+  | DType IdentBind (Expr n) [Ctor n a]
 deriving instance TTGC Show n ⇒ Show (Decl' n a)
 
 data Ctor (n ∷ Stage) a = Ctor Span (Scope a) (Maybe IdentBind) [Field n]

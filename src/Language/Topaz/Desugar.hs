@@ -29,7 +29,7 @@ decl (Decl s sc d) = Decl s sc $ case d of
   DBind pat ty b → undefined
   DMutual ds → undefined
   DRecord i ty c → undefined
-  DData i ty cs → undefined
+  DType i ty cs → undefined
 
 flattenArgs ∷ [Loc (Arg 'Desugared)]
   → (Expr 'Desugared, Loc (Block 'Desugared))

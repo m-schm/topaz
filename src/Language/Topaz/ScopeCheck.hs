@@ -103,9 +103,9 @@ decl (Decl s sc d) = Decl s sc <$> case d of
   DRecord ib t c → do
     insertLocal ib
     liftA2 (DRecord ib) (expr t) (ctor c)
-  DData ib t cs → do
+  DType ib t cs → do
     insertLocal ib
-    liftA2 (DData ib) (expr t) (traverse ctor cs)
+    liftA2 (DType ib) (expr t) (traverse ctor cs)
 
 ctor ∷ Ctor 'Desugared a → ChkM (Ctor 'ScopeChecked a)
 ctor (Ctor s sc mib fs) = do
