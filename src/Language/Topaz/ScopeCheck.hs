@@ -99,13 +99,13 @@ decl (Decl s sc d) = Decl s sc <$> case d of
     p' ← pattern_ p
     b' ← b & loc %%~ block
     pure $ DBind p' t' b'
-  DMutual ds → undefined
   DRecord ib t c → do
     insertLocal ib
     liftA2 (DRecord ib) (expr t) (ctor c)
   DType ib t cs → do
     insertLocal ib
     liftA2 (DType ib) (expr t) (traverse ctor cs)
+decl (Mutual s ds) = undefined
 
 ctor ∷ Ctor 'Desugared a → ChkM (Ctor 'ScopeChecked a)
 ctor (Ctor s sc mib fs) = do

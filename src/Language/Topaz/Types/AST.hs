@@ -75,14 +75,15 @@ data ExprF (n ∷ Stage) r
 
 deriving instance (Show r, Show (Pattern n), TTGC Show n) ⇒ Show (ExprF n r)
 
-data Decl (n ∷ Stage) a = Decl Span (Scope a) (Decl' n a)
+data Decl (n ∷ Stage) a
+  = Decl Span (Scope a) (Decl' n a)
+  | Mutual Span [Decl n a]
 deriving instance TTGC Show n ⇒ Show (Decl n a)
 
 data Decl' (n ∷ Stage) a
   = DImport Import
   | DBindFn IdentBind (Expr n) (Loc (Block n)) (TTGArgs n)
   | DBind (Pattern n) (Expr n) (Loc (Block n))
-  | DMutual [Decl n a]
   | DRecord IdentBind (Expr n) (Ctor n a)
   | DType IdentBind (Expr n) [Ctor n a]
 deriving instance TTGC Show n ⇒ Show (Decl' n a)

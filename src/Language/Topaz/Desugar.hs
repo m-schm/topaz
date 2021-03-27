@@ -20,6 +20,7 @@ block ∷ Block 'Parsed → Block 'Desugared
 block (Block ds e) = Block (fmap decl ds) (expr e)
 
 decl ∷ Decl 'Parsed a → Decl 'Desugared a
+decl (Mutual s ds) = Mutual s (fmap decl ds)
 decl (Decl s sc d) = Decl s sc $ case d of
   DImport i → DImport i -- TODO: modules
   DBindFn i t b as →
@@ -27,7 +28,6 @@ decl (Decl s sc d) = Decl s sc $ case d of
         (t', b') = flattenArgs as' (expr t, over loc block b)
     in DBindFn i t' b' ()
   DBind pat ty b → undefined
-  DMutual ds → undefined
   DRecord i ty c → undefined
   DType i ty cs → undefined
 
