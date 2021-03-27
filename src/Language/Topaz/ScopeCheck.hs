@@ -110,7 +110,7 @@ decl (Decl s sc d) = Decl s sc <$> case d of
 ctor ∷ Ctor 'Desugared a → ChkM (Ctor 'ScopeChecked a)
 ctor (Ctor s sc mib fs) = do
   fs' ← local $ traverse field fs
-  whenJust mib insertLocal
+  whenJust mib \ib → insertCtor ib (length' fs)
   pure $ Ctor s sc mib fs'
 
 field ∷ Field 'Desugared → ChkM (Field 'ScopeChecked)

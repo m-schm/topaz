@@ -54,7 +54,7 @@ data EqualsBehavior = AnythingGoes | NoEquals | NoLambda
   deriving Eq
 
 decl ∷ Parser (Loc (Scope a)) → Parser (Decl 'Parsed a)
-decl pub = let_ <|> import_
+decl pub = import_ <|> let_
   where
 
     let_ = (pub <|> fmap (Loc Local) (token TLet))
