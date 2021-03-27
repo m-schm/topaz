@@ -66,6 +66,9 @@ data ExprF (n ∷ Stage) r
   | r :$@ r
   | Lam (TTGLam n) r (Loc (Block n))
   | Pi (TTGLam n) r (Loc (Block n))
+  | Tuple [r]
+  | TupleT [(Pattern n, r)]
+  | Row (Map Ident (IdentBind, r))
   | Var (TTGIdent n)
   | Rec
   | Hole
