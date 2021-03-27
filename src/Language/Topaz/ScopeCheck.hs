@@ -88,32 +88,33 @@ scopeCheck (TopLevel mp ds me) =
 decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeChecked a)
 decl (Decl s sc d) = Decl s sc <$> case d of
   DImport i → pure (DImport i) -- TODO: handle imports
-  DBindFn li@(Loc i s') t b f → do
+  DBindFn ib t b () → do
     t' ← expr t
-    #unqualified . at i ?= NameInfo f NotCtor s' Local
+    insertLocal ib
     b' ← b & loc %%~ block
-    pure $ DBind (s' :< PVar f li) t' b'
+    let IdentBind _ (Loc _ s') = ib
+    pure $ DBind (s' :< PVar ib) t' b'
   DBind p t b → do
     t' ← expr t
     p' ← pattern_ p
     b' ← b & loc %%~ block
     pure $ DBind p' t' b'
   DMutual ds → undefined
-  DRecord i t c → undefined
+  DRecord ib t c → do
+    insertLocal ib
+    liftA2 (DRecord ib) (expr t) (ctor c)
   DData i t cs → undefined
 
 ctor ∷ Ctor 'Desugared a → ChkM (Ctor 'ScopeChecked a)
-ctor (Ctor s sc mi fs) = do
+ctor (Ctor s sc mib fs) = do
   fs' ← local $ traverse field fs
-  whenJust mi \(fp, Loc i s') →
-    #unqualified . at i ?= NameInfo fp NotCtor s' Local
-  pure $ Ctor s sc mi fs'
+  whenJust mib insertLocal
+  pure $ Ctor s sc mib fs'
 
 field ∷ Field 'Desugared → ChkM (Field 'ScopeChecked)
-field (Field t mi ty) = do
-  whenJust mi \(fp, Loc i s') →
-    #unqualified . at i ?= NameInfo fp NotCtor s' Local
-  Field t mi <$> expr ty
+field (Field t mib ty) = do
+  whenJust mib insertLocal
+  Field t mib <$> expr ty
 
 block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
 block (Block ds e) = local $ liftA2 Block (traverse decl ds) (expr e)
@@ -143,10 +144,7 @@ arg (Arg t p ty) = do
 
 pattern_ ∷ Pattern 'Desugared → ChkM (Pattern 'ScopeChecked)
 pattern_ = _unwrap %%~ \case
-  PVar fp n@(Loc i s) → do
-    assertFree n
-    #unqualified . at i ?= NameInfo fp NotCtor s Local
-    pure $ PVar fp n
+  PVar ib    → insertLocal ib $> PVar ib
   PHole      → pure PHole
   PTup ps    → PTup <$> traverse pattern_ ps
   PCtor c ps → do
@@ -158,20 +156,16 @@ pattern_ = _unwrap %%~ \case
   p :@ p'     → liftA2 (:@) (pattern_ p) (pattern_ p')
   PX pd       → undefined
 
--- arg (Arg mi e) = do
---   e' ← expr e
---   whenJust mi \i →
---     #unqualified . at i ?= Unknown Local
---   pure $ Arg mi e'
--- arg (Implicit i e) = do
---   e' ← expr e
---   #unqualified . at i ?= Unknown Local
---   pure $ Implicit i e'
--- arg (Instance mi e) = do
---   e' ← expr e
---   whenJust mi \i →
---     #unqualified . at i ?= Unknown Local
---   pure $ Instance mi e'
+insertLocal ∷ IdentBind → ChkM ()
+insertLocal ib = insertLocal' ib NotCtor
+
+insertCtor ∷ IdentBind → Word → ChkM ()
+insertCtor ib = insertLocal' ib . IsCtor
+
+insertLocal' ∷ IdentBind → Arity → ChkM ()
+insertLocal' (IdentBind fp li@(Loc i s)) a = do
+  assertFree li
+  #unqualified . at i ?= NameInfo fp a s Local
 
 local ∷ ChkM a → ChkM a
 local ma = push *> ma <* pop where

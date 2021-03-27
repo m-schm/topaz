@@ -8,7 +8,7 @@ import Control.Lens hiding ((:<))
 import Relude
 
 type instance TTGIdent 'Desugared = QIdent
-type instance TTGArgs 'Desugared = FixityPrec
+type instance TTGArgs 'Desugared = ()
 type instance TTGLam 'Desugared = Loc (Arg 'Desugared)
 type instance ExprX 'Desugared = Ops (Expr 'Desugared)
 type instance PatX 'Desugared = Ops (Pattern 'Desugared)
@@ -22,10 +22,10 @@ block (Block ds e) = Block (fmap decl ds) (expr e)
 decl ∷ Decl 'Parsed a → Decl 'Desugared a
 decl (Decl s sc d) = Decl s sc $ case d of
   DImport i → DImport i -- TODO: modules
-  DBindFn i t b (f, as) →
+  DBindFn i t b as →
     let as' = as & mapped . loc %~ arg
         (t', b') = flattenArgs as' (expr t, over loc block b)
-    in DBindFn i t' b' f
+    in DBindFn i t' b' ()
   DBind pat ty b → undefined
   DMutual ds → undefined
   DRecord i ty c → undefined
@@ -71,7 +71,7 @@ arg (Arg t pat ty) = Arg t (pattern_ pat) (expr ty)
 
 pattern_ ∷ Pattern 'Parsed → Pattern 'Desugared
 pattern_ = _unwrap %~ \case
-  PVar fp n → PVar fp n
+  PVar ib → PVar ib
   PHole → PHole
   PTup ps → PTup (fmap pattern_ ps)
   PCtor c ps → PCtor c $ fmap pattern_ ps

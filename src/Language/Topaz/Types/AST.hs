@@ -80,20 +80,21 @@ deriving instance TTGC Show n ⇒ Show (Decl n a)
 
 data Decl' (n ∷ Stage) a
   = DImport Import
-  | DBindFn (Loc Ident) (Expr n) (Loc (Block n)) (TTGArgs n)
+  | DBindFn IdentBind (Expr n) (Loc (Block n)) (TTGArgs n)
   | DBind (Pattern n) (Expr n) (Loc (Block n))
   | DMutual [Decl n a]
-  | DRecord (Loc Ident) (Expr n) (Ctor n a)
-  | DData (Loc Ident) (Expr n) [Ctor n a]
+  | DRecord IdentBind (Expr n) (Ctor n a)
+  | DData IdentBind (Expr n) [Ctor n a]
 deriving instance TTGC Show n ⇒ Show (Decl' n a)
 
-data Ctor (n ∷ Stage) a =
-  Ctor Span (Scope a) (Maybe (FixityPrec, Loc Ident)) [Field n]
+data Ctor (n ∷ Stage) a = Ctor Span (Scope a) (Maybe IdentBind) [Field n]
 deriving instance TTGC Show n ⇒ Show (Ctor n a)
 
-data Field (n ∷ Stage) =
-  Field ArgType (Maybe (FixityPrec, Loc Ident)) (Expr n)
+data Field (n ∷ Stage) = Field ArgType (Maybe IdentBind) (Expr n)
 deriving instance TTGC Show n ⇒ Show (Field n)
+
+data IdentBind = IdentBind FixityPrec (Loc Ident)
+  deriving Show
 
 data Arg (n ∷ Stage) = Arg ArgType (Pattern n) (Expr n)
 deriving instance TTGC Show n ⇒ Show (Arg n)
@@ -103,7 +104,7 @@ data ArgType = Visible | Implicit | Instance
 
 type Pattern n = Cofree (PatternF n) Span
 data PatternF (n ∷ Stage) r
-  = PVar FixityPrec (Loc Ident)
+  = PVar IdentBind
   | PHole
   | PTup (AtLeastTwo r)
   | PCtor (TTGIdent n) [r]

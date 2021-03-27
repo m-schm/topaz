@@ -24,7 +24,7 @@ dbg _ x = x
 
 type instance TTGIdent 'Parsed = QIdent
 type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
-type instance TTGArgs 'Parsed = (FixityPrec, [Loc (Arg 'Parsed)])
+type instance TTGArgs 'Parsed = [Loc (Arg 'Parsed)]
 type instance ExprX 'Parsed = Ops (Expr 'Parsed)
 type instance PatX 'Parsed = Ops (Pattern 'Parsed)
 
@@ -76,7 +76,7 @@ decl pub = let_ <|> import_
       let ret = fromMaybe (eq :< Hole) mret
       b@(Loc _ end) ← block
       pure $ Decl (beg <> end) sc $
-        DBindFn i ret b (FixityPrec Nothing Nothing, as)
+        DBindFn (IdentBind (FixityPrec Nothing Nothing) i) ret b as
 
     import_ = do
       (ms, is) ← try $ (,)
@@ -130,7 +130,7 @@ pattern' = dbg "pattern'" do
 pattern1 ∷ Parser (Pattern 'Parsed)
 pattern1 = (:< PHole) <$> token THole
        <|> liftC (flip PCtor []) <$> qident1
-       <|> (\fp i@(Loc _ s) → s :< PVar fp i) <$> fixityPrec <*> ident
+       <|> liftA2 (\fp li@(Loc _ s) → s :< PVar (IdentBind fp li)) fixityPrec ident
        <|> parens pattern_
 
 fixityPrec ∷ Parser FixityPrec
