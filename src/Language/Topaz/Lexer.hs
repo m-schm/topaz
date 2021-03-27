@@ -106,7 +106,7 @@ aToken = choice @[]
   , keyword "pub" TPub
   , keyword "rec" TRec
   , keyword "record" TRecord
-  , keyword "type" TRecord
+  , keyword "type" TType
   , TSymbol <$  char '\'' <*> ident
   , TVar    <$> ident
   , TOp     <$> operator

@@ -26,7 +26,8 @@ unLexeme ∷ Lexeme a → Token
 unLexeme (L _ t _) = t
 
 data Token
-  = TImport | TLet | TPub | TRec | TDo | TMatch | TIn | TRecord | TMutual
+  = TImport | TLet | TPub | TRec | TDo | TRecord | TType | TMutual
+  | TMatch | TIn
   | TColon | TAt | THole | TComma | TPipe | TPeriod
   | TArrowL | TArrowR | TArrowR'
   | TBraceL | TBraceR | TBracketL | TBracketR | TParenL | TParenR
