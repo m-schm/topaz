@@ -8,7 +8,6 @@ import Relude
 import Control.Lens (Lens)
 import Control.Comonad as M
 import Control.Comonad.Cofree (ComonadCofree(..))
-import Text.Show
 
 infixr 5 :<
 
@@ -23,9 +22,7 @@ instance Functor f ⇒ Comonad (Cofree f) where
 instance Functor f ⇒ ComonadCofree f (Cofree f) where
   unwrap (_ :< xs) = xs
 
-instance (Show a, ∀ x. Show x ⇒ Show (f x)) ⇒ Show (Cofree f a) where
-  showsPrec p (x :< xs) = showParen (p > 5) $
-    showsPrec 6 x . showString " :< " . showsPrec 6 xs
+deriving instance (Show a, ∀ x. Show x ⇒ Show (f x)) ⇒ Show (Cofree f a)
 
 _unwrap ∷ Lens (Cofree f a) (Cofree g a) (f (Cofree f a)) (g (Cofree g a))
 _unwrap f (x :< xs) = (x :<) <$> f xs
