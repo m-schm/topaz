@@ -55,16 +55,7 @@ expr = _unwrap %~ \case
   Var v → Var v
   Rec → Rec
   Hole → Hole
-  X es → X (ops expr es)
-
-ops ∷ ∀ a b. (a → b) → Ops a → Ops b
-ops f = \case
-  Pfx o → Pfx (ops' o)
-  Ifx e o → Ifx (f e) (ops' o)
-  where
-    ops' ∷ Ops' a → Ops' b
-    ops' (Binop os e xs) = Binop os (f e) (ops' xs)
-    ops' Done = Done
+  X es → X (fmap expr es)
 
 arg ∷ Arg 'Parsed → Arg 'Desugared
 arg (Arg t pat ty) = Arg t (pattern_ pat) (expr ty)
@@ -77,7 +68,7 @@ pattern_ = _unwrap %~ \case
   PCtor c ps → PCtor c $ fmap pattern_ ps
   PAnnot p t → PAnnot (pattern_ p) (expr t)
   p :@ p' → pattern_ p :@ pattern_ p'
-  PX ps → PX (ops pattern_ ps)
+  PX ps → PX (fmap pattern_ ps)
 
 flattenLam ∷ NonEmpty (Loc (Arg 'Desugared))
   → Expr 'Desugared

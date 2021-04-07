@@ -38,12 +38,12 @@ data ModulePath = ModulePath (NonEmpty Text) | Main
 data Ops a
   = Pfx (Ops' a)
   | Ifx a (Ops' a)
-  deriving Show
+  deriving (Show, Functor)
 
 data Ops' a
   = Binop (NonEmpty (Loc Text)) a (Ops' a)
   | Done
-  deriving Show
+  deriving (Show, Functor)
 
 data Stage = Parsed | Desugared | ScopeChecked
 
