@@ -8,6 +8,7 @@ import Language.Topaz.Types.Cofree
 import Control.Lens hiding ((:<))
 import Text.Megaparsec (SourcePos)
 import Text.Show
+import GHC.Exts (IsList(..))
 
 data Span = Span SourcePos SourcePos
 
@@ -20,7 +21,7 @@ data Ident = Ident Text | Prefix Text
   deriving (Eq, Ord, Show)
 
 data QIdent = QIdent (Maybe ModulePath) Ident
-  deriving Show
+  deriving (Eq, Show)
 
 data KnownIdent
   = LocalDef     -- ^ A locally bound name
@@ -35,6 +36,13 @@ data KnownIdent
 data ModulePath = ModulePath (NonEmpty Text) | Main
   deriving (Eq, Ord, Show)
 
+-- | Empty list -> 'Main'
+instance IsList ModulePath where
+  type Item ModulePath = Text
+  fromList = maybe Main ModulePath . nonEmpty
+  toList Main = []
+  toList (ModulePath xs) = Relude.toList xs
+
 data Ops a
   = Pfx (Ops' a)
   | Ifx a (Ops' a)
@@ -45,7 +53,7 @@ data Ops' a
   | Done
   deriving (Show, Functor)
 
-data Stage = Parsed | Desugared | ScopeChecked
+data Stage = Parsed | Desugared | Checked
 
 type TTGC (c ∷ Type → Constraint) n =
   ( c (TTGIdent n), c (TTGLam n), c (ExprX n)
@@ -104,7 +112,7 @@ data Arg (n ∷ Stage) = Arg ArgType (Pattern n) (Expr n)
 deriving instance TTGC Show n ⇒ Show (Arg n)
 
 data ArgType = Visible | Implicit | Instance
-  deriving Show
+  deriving (Show, Eq)
 
 type Pattern n = Cofree (PatternF n) Span
 data PatternF (n ∷ Stage) r
