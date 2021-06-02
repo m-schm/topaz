@@ -55,85 +55,79 @@ data Ops' a
 
 data Stage = Parsed | Desugared | Checked
 
-type TTGC (c ∷ Type → Constraint) n =
-  ( c (TTGIdent n), c (TTGLam n), c (ExprX n)
-  , c (PatX n)
-  , c (TTGArgs n)
+type TTGC (c ∷ Type → Constraint) f n =
+  ( c (TTGIdent n f), c (TTGLam n f), c (ExprX n f)
+  , c (PatX n f)
+  , c (TTGArgs n f)
   )
 
-type family TTGIdent (n ∷ Stage)
-type family TTGLam (n ∷ Stage)
-type family TTGArgs (n ∷ Stage)
-type family ExprX (n ∷ Stage)
-type family PatX (n ∷ Stage)
+type family TTGIdent (n ∷ Stage) (f ∷ NodeType → Type)
+type family TTGLamF (n ∷ Stage) (f ∷ NodeType → Type)
+type family TTGArgs (n ∷ Stage) (f ∷ NodeType → Type)
+type family ExprX (n ∷ Stage) (f ∷ NodeType → Type)
+type family PatX (n ∷ Stage) (f ∷ NodeType → Type)
+type family TTGTupleF (n ∷ Stage) ∷ Type → Type
 
-type Expr n = Cofree (ExprF n) Span
-data ExprF (n ∷ Stage) r
-  = Lit Literal
-  | r :$ r
-  | r :$@ r
-  | Lam (TTGLam n) r (Loc (Block n))
-  | Pi (TTGLam n) r (Loc (Block n))
-  | Tuple [r]
-  | TupleT [(Pattern n, r)]
-  | Row (Map Ident (IdentBind, r))
-  | Var (TTGIdent n)
-  | Rec
-  | Hole
-  | Match r [(Pattern n, Loc (Block n))]
-  | X (ExprX n)
-  deriving (Functor, Foldable, Traversable)
+data NodeType
+  = EXP | PAT | BLK | ARG
+  | DEC IsTopLevel | DEC' IsTopLevel | CTOR IsTopLevel | FIELD
+  | BIND | RAWIDENT
 
-deriving instance (Show r, Show (Pattern n), TTGC Show n) ⇒ Show (ExprF n r)
+data ASTF (s ∷ Stage) (f ∷ NodeType → Type) (i ∷ NodeType) where
+  Lit         ∷ Literal → ASTF s f 'EXP
+  (:$), (:$@) ∷ f 'EXP → f 'EXP → ASTF s f 'EXP
+  Lam, Pi     ∷ TTGLamF n (f 'ARG) → f 'EXP → f 'BLK → ASTF s f 'EXP
+  Tuple       ∷ TTGTupleF n (f 'EXP) → ASTF s f 'EXP
+  TupleT      ∷ TTGTupleF n (f 'PAT, f 'EXP) → ASTF s f 'EXP
+  Row         ∷ Map Ident (f 'BIND, f 'EXP) → ASTF s f 'EXP
+  Var         ∷ TTGIdent n f → ASTF s f 'EXP
+  Rec, Hole   ∷ ASTF s f 'EXP
+  Match       ∷ f 'EXP → [(f 'PAT, f 'BLK)] → ASTF s f 'EXP
+  X           ∷ ExprX n f → ASTF s f 'EXP
 
-data Decl (n ∷ Stage) a
-  = Decl Span (Scope a) (Decl' n a)
-  | Mutual Span [Decl n a]
-deriving instance TTGC Show n ⇒ Show (Decl n a)
+  PVar   ∷ f 'BIND → ASTF s f 'PAT
+  PHole  ∷ ASTF s f 'PAT
+  PTup   ∷ TTGTupleF n (f 'EXP) → ASTF s f 'PAT
+  PCtor  ∷ TTGIdent n f → [f 'PAT] → ASTF s f 'PAT
+  PAnnot ∷ f 'PAT → f 'EXP → ASTF s f 'PAT
+  (:@)   ∷ f 'PAT → f 'PAT → ASTF s f 'PAT
+  PX     ∷ PatX n f → ASTF s f 'PAT
 
-data Decl' (n ∷ Stage) a
-  = DImport Import
-  | DBindFn IdentBind (Expr n) (Loc (Block n)) (TTGArgs n)
-  | DBind (Pattern n) (Expr n) (Loc (Block n))
-  | DRecord IdentBind (Expr n) (Ctor n a)
-  | DType IdentBind (Expr n) [Ctor n a]
-deriving instance TTGC Show n ⇒ Show (Decl' n a)
+  Decl   ∷ Scope a → f ('DEC' a) → ASTF s f ('DEC a)
+  Mutual ∷ [f ('DEC a)] → ASTF s f ('DEC a)
 
-data Ctor (n ∷ Stage) a = Ctor Span (Scope a) (Maybe IdentBind) [Field n]
-deriving instance TTGC Show n ⇒ Show (Ctor n a)
+  DImport ∷ Import → ASTF s f ('DEC' a)
+  DBindFn ∷ f 'BIND → f 'EXP → f 'BLK → TTGArgs n f → ASTF s f ('DEC' a)
+  DBind   ∷ f 'PAT → f 'EXP → f 'BLK → ASTF s f ('DEC' a)
+  DRecord ∷ f 'BIND → f 'EXP → f 'BLK → f ('CTOR a) → ASTF s f ('DEC' a)
+  DType   ∷ f 'BIND → f 'EXP → f 'BLK → [f ('CTOR a)] → ASTF s f ('DEC' a)
 
-data Field (n ∷ Stage) = Field ArgType (Maybe IdentBind) (Expr n)
-deriving instance TTGC Show n ⇒ Show (Field n)
+  Ctor  ∷ Scope a → Maybe (f 'BIND) → [f 'FIELD] → ASTF s f ('CTOR a)
+  Field ∷ ArgType → Maybe (f 'BIND) → f 'EXP → ASTF s f 'FIELD
 
-data IdentBind = IdentBind FixityPrec (Loc Ident)
-  deriving Show
+  Bind     ∷ FixityPrec → f 'RAWIDENT → ASTF s f 'BIND
+  RawIdent ∷ Ident → ASTF s f 'RAWIDENT
 
-data Arg (n ∷ Stage) = Arg ArgType (Pattern n) (Expr n)
-deriving instance TTGC Show n ⇒ Show (Arg n)
+  Arg ∷ ArgType → f 'PAT → f 'EXP → ASTF s f 'ARG
+
+infix 5 :@, :$, :$@
+
+data Expr n
+data Pattern n
+data Decl n a
+data Decl' n a
 
 data ArgType = Visible | Implicit | Instance
   deriving (Show, Eq)
 
-type Pattern n = Cofree (PatternF n) Span
-data PatternF (n ∷ Stage) r
-  = PVar IdentBind
-  | PHole
-  | PTup (AtLeastTwo r)
-  | PCtor (TTGIdent n) [r]
-  | PAnnot r (Expr n)
-  | r :@ r
-  | PX (PatX n)
-  deriving (Functor, Foldable, Traversable)
-infix 5 :@
-
-deriving instance (Show r, TTGC Show n, Show (Expr n)) ⇒ Show (PatternF n r)
-
 data AtLeastTwo a = AtLeastTwo a (NonEmpty a)
   deriving (Show, Eq, Functor, Foldable, Traversable)
 
-data Scope a where
+data IsTopLevel = ItsTopLevel | NotTopLevel
+
+data Scope (a ∷ IsTopLevel) where
   Local  ∷ Scope a
-  Global ∷ Scope TopLevel
+  Global ∷ Scope ItsTopLevel
 
 deriving instance Show (Scope a)
 
