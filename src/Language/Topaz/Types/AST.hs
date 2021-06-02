@@ -108,6 +108,8 @@ data ASTF (s ∷ Stage) (f ∷ NodeType → Type) (i ∷ NodeType) where
   Bind     ∷ FixityPrec → f 'RAWIDENT → ASTF s f 'BIND
   RawIdent ∷ Ident → ASTF s f 'RAWIDENT
 
+  Block ∷ [f ('DEC NotTopLevel)] → f 'EXP → ASTF s f 'BLK
+
   Arg ∷ ArgType → f 'PAT → f 'EXP → ASTF s f 'ARG
 
 infix 5 :@
@@ -160,9 +162,6 @@ locSpan = lens (\(Loc _ s) → s) (\(Loc a _) s' → Loc a s')
 instance Applicative Loc where
   pure = error "Loc is only Apply"
   Loc f s <*> Loc x t = Loc (f x) (s <> t)
-
-data Block (n ∷ Stage) = Block [Decl n Block] (Expr n)
-deriving instance TTGC Show n ⇒ Show (Block n)
 
 data TopLevel (n ∷ Stage) =
   TopLevel ModulePath [Decl n TopLevel] (Maybe (Expr n))
