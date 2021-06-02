@@ -12,6 +12,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Traversable
 import Relude hiding (local)
 import Language.Topaz.Utils
+import Language.Topaz.Types.Result
 
 type instance TTGIdent 'ScopeChecked = KnownIdent
 type instance TTGArgs 'ScopeChecked = Void
@@ -42,29 +43,13 @@ instance Monoid Env where
   mappend = (<>)
   mempty = Env mempty mempty
 
-newtype ChkM a = ChkM (StateT (NonEmpty Env) Result a)
+newtype ChkM a = ChkM (StateT (NonEmpty Env) (Result ScopeError) a)
   deriving newtype (Functor, Applicative, Monad)
 
 instance MonadState Env ChkM where
   get = ChkM $ gets head
   put = ChkM . assign neHead where
     neHead = lens head (\(_ :| xs) y → y :| xs)
-
-data Result a = Ok a | Err (NonEmpty ScopeError)
-  deriving (Functor, Foldable, Traversable)
-
-instance Applicative Result where
-  pure = Ok
-  Ok f  <*> Ok x   = Ok $ f x
-  Err e <*> Ok _   = Err e
-  Ok _  <*> Err e  = Err e
-  Err e <*> Err e' = Err $ e <> e'
-
-instance Monad Result where
-  return = pure
-  Err e >>= _ = Err e
-  Ok  x >>= f = f x
-  (>>) = (*>)
 
 data ScopeError
   = NoIdent (Maybe ModulePath) Ident
@@ -198,7 +183,7 @@ lookupArity qi = do
 throw ∷ ScopeError → ChkM a
 throw = ChkM . throw'
 
-throw' ∷ MonadTrans t ⇒ ScopeError → t Result a
+throw' ∷ MonadTrans t ⇒ e → t (Result e) a
 throw' = lift . Err . pure
 
 assertFree ∷ Loc Ident → ChkM ()
