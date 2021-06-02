@@ -7,7 +7,7 @@ import Text.Megaparsec (runParser, errorBundlePretty)
 import Language.Topaz.Lexer (lex)
 import Language.Topaz.Parser (topLevel)
 import Language.Topaz.Desugar (desugar)
-import Language.Topaz.Types.AST (ModulePath(Main))
+import Language.Topaz.Types.AST (ModulePath(Main), TopLevel(..), Decl(..))
 import Language.Topaz.ScopeCheck (scopeCheck)
 
 main ∷ IO ()
@@ -23,4 +23,8 @@ main = do
         Left peb → print peb
         Right ast → case scopeCheck (desugar ast) of
           Left ses → traverse_ print ses
-          Right ast' → print ast'
+          Right (TopLevel _ ds me) → do
+            for_ ds \case
+               Decl _ _ d → print d
+               Mutual _ ds' → traverse_ print ds'
+            whenJust me print

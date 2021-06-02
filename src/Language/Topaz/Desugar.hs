@@ -52,9 +52,14 @@ expr = _unwrap %~ \case
         t' = expr t
         b' = b & loc %~ block
     in unwrap $ flattenLam as' t' b'
+  Pi _ _ _ -> undefined
+  Match _ _ -> undefined
   Var v → Var v
   Rec → Rec
   Hole → Hole
+  Tuple xs → Tuple $ fmap undefined xs
+  TupleT xs → undefined
+  Row r → Row $ fmap (second expr) r
   X es → X (fmap expr es)
 
 arg ∷ Arg 'Parsed → Arg 'Desugared
