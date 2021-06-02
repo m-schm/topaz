@@ -14,11 +14,11 @@ import Relude hiding (local)
 import Language.Topaz.Utils
 import Language.Topaz.Types.Result
 
-type instance TTGIdent 'ScopeChecked = KnownIdent
-type instance TTGArgs 'ScopeChecked = Void
-type instance TTGLam 'ScopeChecked = Loc (Arg 'ScopeChecked)
-type instance ExprX 'ScopeChecked = Void
-type instance PatX 'ScopeChecked = Void
+type instance TTGIdent 'Checked = KnownIdent
+type instance TTGArgs 'Checked = Void
+type instance TTGLam 'Checked = Loc (Arg 'Checked)
+type instance ExprX 'Checked = Void
+type instance PatX 'Checked = Void
 
 data NameSource = Imported ModulePath | Local
 
@@ -61,7 +61,7 @@ data ScopeError
   deriving Show
 
 scopeCheck ∷ TopLevel 'Desugared
-  → Either (NonEmpty ScopeError) (TopLevel 'ScopeChecked)
+  → Either (NonEmpty ScopeError) (TopLevel 'Checked)
 scopeCheck (TopLevel mp ds me) =
   TopLevel mp <$> traverse decl ds <*> traverse expr me
   & runChkM [mempty]
@@ -70,7 +70,7 @@ scopeCheck (TopLevel mp ds me) =
       Ok a   → Right a
       Err es → Left es
 
-decl ∷ Decl 'Desugared a → ChkM (Decl 'ScopeChecked a)
+decl ∷ Decl 'Desugared a → ChkM (Decl 'Checked a)
 decl (Decl s sc d) = Decl s sc <$> case d of
   DImport i → pure (DImport i) -- TODO: handle imports
   DBindFn ib t b () → do
@@ -92,21 +92,21 @@ decl (Decl s sc d) = Decl s sc <$> case d of
     liftA2 (DType ib) (expr t) (traverse ctor cs)
 decl (Mutual s ds) = undefined
 
-ctor ∷ Ctor 'Desugared a → ChkM (Ctor 'ScopeChecked a)
+ctor ∷ Ctor 'Desugared a → ChkM (Ctor 'Checked a)
 ctor (Ctor s sc mib fs) = do
   fs' ← local $ traverse field fs
   whenJust mib \ib → insertCtor ib (length' fs)
   pure $ Ctor s sc mib fs'
 
-field ∷ Field 'Desugared → ChkM (Field 'ScopeChecked)
+field ∷ Field 'Desugared → ChkM (Field 'Checked)
 field (Field t mib ty) = do
   whenJust mib insertLocal
   Field t mib <$> expr ty
 
-block ∷ Block 'Desugared → ChkM (Block 'ScopeChecked)
+block ∷ Block 'Desugared → ChkM (Block 'Checked)
 block (Block ds e) = local $ liftA2 Block (traverse decl ds) (expr e)
 
-expr ∷ Expr 'Desugared → ChkM (Expr 'ScopeChecked)
+expr ∷ Expr 'Desugared → ChkM (Expr 'Checked)
 expr = _unwrap %%~ \case
   Lit l → pure (Lit l)
   f :$ x → liftA2 (:$) (expr f) (expr x)
@@ -121,15 +121,18 @@ expr = _unwrap %%~ \case
   Match e cs → Match
     <$> expr e
     <*> for cs (bitraverse pattern_ $ loc block)
+  Tuple xs → undefined
+  TupleT xs → undefined
+  Row r → undefined
   X ops → undefined
 
-arg ∷ Arg 'Desugared → ChkM (Arg 'ScopeChecked)
+arg ∷ Arg 'Desugared → ChkM (Arg 'Checked)
 arg (Arg t p ty) = do
   ty' ← expr ty
   p' ← pattern_ p
   pure $ Arg t p' ty'
 
-pattern_ ∷ Pattern 'Desugared → ChkM (Pattern 'ScopeChecked)
+pattern_ ∷ Pattern 'Desugared → ChkM (Pattern 'Checked)
 pattern_ = _unwrap %%~ \case
   PVar ib    → insertLocal ib $> PVar ib
   PHole      → pure PHole
