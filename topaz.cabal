@@ -31,6 +31,7 @@ library
       Language.Topaz.Typecheck
       Language.Topaz.Types.AST
       Language.Topaz.Types.Cofree
+      Language.Topaz.Types.Indexed
       Language.Topaz.Types.Lexer
       Language.Topaz.Types.Literal
       Language.Topaz.Types.Result
@@ -66,11 +67,13 @@ library
       OverloadedLists
       OverloadedStrings
       PatternSynonyms
+      PolyKinds
       QuantifiedConstraints
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      StandaloneKindSignatures
       TupleSections
       TypeApplications
       TypeFamilies
@@ -128,11 +131,13 @@ executable topaz-exe
       OverloadedLists
       OverloadedStrings
       PatternSynonyms
+      PolyKinds
       QuantifiedConstraints
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      StandaloneKindSignatures
       TupleSections
       TypeApplications
       TypeFamilies
@@ -192,11 +197,13 @@ test-suite topaz-test
       OverloadedLists
       OverloadedStrings
       PatternSynonyms
+      PolyKinds
       QuantifiedConstraints
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      StandaloneKindSignatures
       TupleSections
       TypeApplications
       TypeFamilies

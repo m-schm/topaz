@@ -72,11 +72,13 @@ default-extensions:
 - OverloadedLists
 - OverloadedStrings
 - PatternSynonyms
+- PolyKinds
 - QuantifiedConstraints
 - RankNTypes
 - RecordWildCards
 - ScopedTypeVariables
 - StandaloneDeriving
+- StandaloneKindSignatures
 - TupleSections
 - TypeApplications
 - TypeFamilies
