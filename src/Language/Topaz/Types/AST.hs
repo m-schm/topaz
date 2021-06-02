@@ -110,7 +110,8 @@ data ASTF (s ∷ Stage) (f ∷ NodeType → Type) (i ∷ NodeType) where
 
   Arg ∷ ArgType → f 'PAT → f 'EXP → ASTF s f 'ARG
 
-infix 5 :@, :$, :$@
+infix 5 :@
+infixl 3 :$, :$@
 
 data Expr n
 data Pattern n
