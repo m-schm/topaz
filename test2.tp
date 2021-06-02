@@ -1,3 +1,5 @@
+;; -*- mode: prog -*-
+
 import Effect.Console as Console
 
 let times {f} [Applicative f] (n: Nat) (x: f Unit): f Unit =

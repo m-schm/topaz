@@ -81,6 +81,7 @@ default-extensions:
 - TypeApplications
 - TypeFamilies
 - UnicodeSyntax
+- ViewPatterns
 
 executables:
   topaz-exe:
