@@ -9,6 +9,7 @@ import Control.Lens hiding ((:<))
 import Text.Megaparsec (SourcePos)
 import Text.Show
 import GHC.Exts (IsList(..))
+import Language.Topaz.Types.Indexed (ICofree)
 
 data Span = Span SourcePos SourcePos
 
@@ -55,18 +56,33 @@ data Ops' a
 
 data Stage = Parsed | Desugared | Checked
 
-type TTGC (c ∷ Type → Constraint) f n =
-  ( c (TTGIdent n f), c (TTGLam n f), c (ExprX n f)
-  , c (PatX n f)
-  , c (TTGArgs n f)
-  )
-
 type family TTGIdent (n ∷ Stage) (f ∷ NodeType → Type)
-type family TTGLamF (n ∷ Stage) (f ∷ NodeType → Type)
 type family TTGArgs (n ∷ Stage) (f ∷ NodeType → Type)
 type family ExprX (n ∷ Stage) (f ∷ NodeType → Type)
 type family PatX (n ∷ Stage) (f ∷ NodeType → Type)
+
+type family TTGLamF (n ∷ Stage) ∷ Type → Type
 type family TTGTupleF (n ∷ Stage) ∷ Type → Type
+
+-- you can't put quantified constraints inside type synonyms, for some reason
+type Forall ∷ (Type → Constraint) → (Type → Type) → Constraint
+class (∀ a. c (f a)) ⇒ Forall c f
+instance (∀ a. c (f a)) ⇒ Forall c f
+
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/14860
+-- can't quantify constraints involving type families
+-- but newtype wrapper around it is ok
+newtype TupleF s a = TupleF (TTGTupleF s a)
+deriving instance Show (TTGTupleF s a) ⇒ Show (TupleF s a)
+
+newtype LamF s a = LamF (TTGLamF s a)
+deriving instance Show (TTGLamF s a) ⇒ Show (LamF s a)
+
+type TTGC ∷ (Type → Constraint) → Stage → (NodeType → Type) → Constraint
+type TTGC c s f =
+  ( c (TTGIdent s f), c (ExprX s f), c (PatX s f), c (TTGArgs s f)
+  , Forall c (LamF s), Forall c (TupleF s)
+  )
 
 data NodeType
   = EXP | PAT | BLK | ARG
@@ -76,28 +92,28 @@ data NodeType
 data ASTF (s ∷ Stage) (f ∷ NodeType → Type) (i ∷ NodeType) where
   Lit         ∷ Literal → ASTF s f 'EXP
   (:$), (:$@) ∷ f 'EXP → f 'EXP → ASTF s f 'EXP
-  Lam, Pi     ∷ TTGLamF n (f 'ARG) → f 'EXP → f 'BLK → ASTF s f 'EXP
-  Tuple       ∷ TTGTupleF n (f 'EXP) → ASTF s f 'EXP
-  TupleT      ∷ TTGTupleF n (f 'PAT, f 'EXP) → ASTF s f 'EXP
+  Lam, Pi     ∷ LamF s (f 'ARG) → f 'EXP → f 'BLK → ASTF s f 'EXP
+  Tuple       ∷ TupleF s (f 'EXP) → ASTF s f 'EXP
+  TupleT      ∷ TupleF s (f 'PAT, f 'EXP) → ASTF s f 'EXP
   Row         ∷ Map Ident (f 'BIND, f 'EXP) → ASTF s f 'EXP
-  Var         ∷ TTGIdent n f → ASTF s f 'EXP
+  Var         ∷ TTGIdent s f → ASTF s f 'EXP
   Rec, Hole   ∷ ASTF s f 'EXP
   Match       ∷ f 'EXP → [(f 'PAT, f 'BLK)] → ASTF s f 'EXP
-  X           ∷ ExprX n f → ASTF s f 'EXP
+  X           ∷ ExprX s f → ASTF s f 'EXP
 
   PVar   ∷ f 'BIND → ASTF s f 'PAT
   PHole  ∷ ASTF s f 'PAT
-  PTup   ∷ TTGTupleF n (f 'EXP) → ASTF s f 'PAT
-  PCtor  ∷ TTGIdent n f → [f 'PAT] → ASTF s f 'PAT
+  PTup   ∷ TupleF s (f 'EXP) → ASTF s f 'PAT
+  PCtor  ∷ TTGIdent s f → [f 'PAT] → ASTF s f 'PAT
   PAnnot ∷ f 'PAT → f 'EXP → ASTF s f 'PAT
   (:@)   ∷ f 'PAT → f 'PAT → ASTF s f 'PAT
-  PX     ∷ PatX n f → ASTF s f 'PAT
+  PX     ∷ PatX s f → ASTF s f 'PAT
 
   Decl   ∷ Scope a → f ('DEC' a) → ASTF s f ('DEC a)
   Mutual ∷ [f ('DEC a)] → ASTF s f ('DEC a)
 
   DImport ∷ Import → ASTF s f ('DEC' a)
-  DBindFn ∷ f 'BIND → f 'EXP → f 'BLK → TTGArgs n f → ASTF s f ('DEC' a)
+  DBindFn ∷ f 'BIND → f 'EXP → f 'BLK → TTGArgs s f → ASTF s f ('DEC' a)
   DBind   ∷ f 'PAT → f 'EXP → f 'BLK → ASTF s f ('DEC' a)
   DRecord ∷ f 'BIND → f 'EXP → f 'BLK → f ('CTOR a) → ASTF s f ('DEC' a)
   DType   ∷ f 'BIND → f 'EXP → f 'BLK → [f ('CTOR a)] → ASTF s f ('DEC' a)
@@ -108,17 +124,22 @@ data ASTF (s ∷ Stage) (f ∷ NodeType → Type) (i ∷ NodeType) where
   Bind     ∷ FixityPrec → f 'RAWIDENT → ASTF s f 'BIND
   RawIdent ∷ Ident → ASTF s f 'RAWIDENT
 
-  Block ∷ [f ('DEC NotTopLevel)] → f 'EXP → ASTF s f 'BLK
+  Block ∷ [f ('DEC 'NotTopLevel)] → f 'EXP → ASTF s f 'BLK
 
   Arg ∷ ArgType → f 'PAT → f 'EXP → ASTF s f 'ARG
 
 infix 5 :@
 infixl 3 :$, :$@
 
-data Expr n
-data Pattern n
-data Decl n a
-data Decl' n a
+deriving instance
+  ( ∀ j. Show (f j)
+  , TTGC Show s f
+  ) ⇒ Show (ASTF s f i)
+
+type Expr n = ICofree Span (ASTF n) 'EXP
+type Pattern n = ICofree Span (ASTF n) 'PAT
+type Decl n a = ICofree Span (ASTF n) ('DEC a)
+type Decl' n a = ICofree Span (ASTF n) ('DEC' a)
 
 data ArgType = Visible | Implicit | Instance
   deriving (Show, Eq)
@@ -126,11 +147,11 @@ data ArgType = Visible | Implicit | Instance
 data AtLeastTwo a = AtLeastTwo a (NonEmpty a)
   deriving (Show, Eq, Functor, Foldable, Traversable)
 
-data IsTopLevel = ItsTopLevel | NotTopLevel
+data IsTopLevel = AtTopLevel | NotTopLevel
 
 data Scope (a ∷ IsTopLevel) where
   Local  ∷ Scope a
-  Global ∷ Scope ItsTopLevel
+  Global ∷ Scope 'AtTopLevel
 
 deriving instance Show (Scope a)
 
@@ -164,8 +185,8 @@ instance Applicative Loc where
   Loc f s <*> Loc x t = Loc (f x) (s <> t)
 
 data TopLevel (n ∷ Stage) =
-  TopLevel ModulePath [Decl n TopLevel] (Maybe (Expr n))
-deriving instance TTGC Show n ⇒ Show (TopLevel n)
+  TopLevel ModulePath [Decl n 'AtTopLevel] (Maybe (Expr n))
+-- deriving instance TTGC Show n ⇒ Show (TopLevel n)
 
 data FixityPrec = FixityPrec (Maybe Word) (Maybe Fixity)
   deriving Show
