@@ -12,6 +12,7 @@ import Relude hiding (All, many, some)
 import Relude.Extra (foldMap1, foldl1', fold1)
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec hiding (Token, token, some, sepBy1, satisfy)
+import Language.Topaz.Types.Indexed
 
 -- #define DEBUG
 #ifdef DEBUG
@@ -22,13 +23,16 @@ dbg _ x = x
 {-# INLINE dbg #-}
 #endif
 
-type instance TTGIdent 'Parsed = QIdent
-type instance TTGLam 'Parsed = NonEmpty (Loc (Arg 'Parsed))
-type instance TTGArgs 'Parsed = [Loc (Arg 'Parsed)]
-type instance ExprX 'Parsed = Ops (Expr 'Parsed)
-type instance PatX 'Parsed = Ops (Pattern 'Parsed)
+type instance TTGIdent 'Parsed _ = QIdent
+type instance TTGArgs 'Parsed f = [f 'ARG]
+type instance ExprX 'Parsed f = Ops (f 'EXP)
+type instance PatX 'Parsed f = Ops (f 'PAT)
+
+type instance TTGLamF 'Parsed = NonEmpty
+type instance TTGTupleF 'Parsed = []
 
 type Parser = Parsec Void [Lexeme SourcePos]
+type S = ICofree Span (ASTF 'Parsed)
 
 topLevel ∷ ModulePath → Parser (TopLevel 'Parsed)
 topLevel mp = TopLevel mp
@@ -37,18 +41,18 @@ topLevel mp = TopLevel mp
   <*  many (token TNewline)
   <*  eof
   where
-    pub ∷ Parser (Loc (Scope TopLevel))
+    pub ∷ Parser (Loc (Scope 'AtTopLevel))
     pub = Loc Global <$> token TPub
 
-block ∷ Parser (Loc (Block 'Parsed))
+block ∷ Parser (S 'BLK)
 block = indented big
     <|> inline
   where
-    big = Block
+    big = _
       <$> many (decl empty <* some (token TNewline))
       <*> expr AnythingGoes
     inline = expr AnythingGoes
-      <&> \e → Loc (Block mempty e) (extract e)
+      <&> \e → iextract e :@< Block mempty e
 
 data EqualsBehavior = AnythingGoes | NoEquals | NoLambda
   deriving Eq
@@ -89,7 +93,7 @@ decl pub = mutual <|> import_ <|> let_
         <*> token TImport
       undefined
 
-arg ∷ Parser (Loc (Arg 'Parsed))
+arg ∷ Parser (S 'ARG)
 arg = arg' Visible
   <|> (locSpan <>~) <$> token TAt <*> arg' Implicit
   <|> brackets instance_
@@ -141,7 +145,7 @@ pattern1 = (:< PHole) <$> token THole
 fixityPrec ∷ Parser FixityPrec
 fixityPrec = pure $ FixityPrec Nothing Nothing
 
-expr ∷ EqualsBehavior → Parser (Expr 'Parsed)
+expr ∷ EqualsBehavior → Parser (S 'EXP)
 expr eqb = dbg "expr" $ try (opExpr eqb) <|> expr' eqb
 
 expr' ∷ EqualsBehavior → Parser (Expr 'Parsed)
@@ -153,10 +157,10 @@ expr' eqb = dbg "expr'" $ when' (eqb /= NoLambda) lam
         <$> some arg
         <*> optional (token TColon *> expr NoLambda)
         <*> token TArrowR'
-      let ret = fromMaybe (s :< Hole) mret
-      body@(Loc _ bs) ← block
-      pure $ (view locSpan (head as) <> bs)
-        :< Lam as ret body
+      let ret = fromMaybe (s :@< Hole) mret
+      body ← block
+      pure $ (view (_head . locSpan) as <> iextract body)
+        :@< Lam as ret body
 
 opExpr ∷ EqualsBehavior → Parser (Expr 'Parsed)
 opExpr eqb = dbg "opExpr" $
@@ -172,16 +176,16 @@ opExpr eqb = dbg "opExpr" $
       Maybe (Expr 'Parsed)
       → NonEmpty (NonEmpty (Loc Text), Expr 'Parsed)
       → Expr 'Parsed
-    mkOp ml xs = s :< X (maybe Pfx Ifx ml xs') where
-      s = maybe id ((<>) . extract) ml $ foldMap1 (extract . snd) xs
+    mkOp ml xs = s :@< X (maybe Pfx Ifx ml xs') where
+      s = maybe id ((<>) . iextract) ml $ foldMap1 (iextract . snd) xs
       xs' = foldr (uncurry Binop) Done xs
 
-app ∷ EqualsBehavior → Parser (Expr 'Parsed)
-app eqb = foldl1' (onCofree (:$)) <$> some (expr1 eqb) where
+app ∷ EqualsBehavior → Parser (S 'EXP)
+app eqb = foldl1' (onICofree (:$)) <$> some (expr1 eqb) where
 
-expr1 ∷ EqualsBehavior → Parser (Expr 'Parsed)
+expr1 ∷ EqualsBehavior → Parser (S 'EXP)
 expr1 eqb = dbg "expr1" $
-      (:< Hole) <$> token THole
+      (:@< Hole) <$> token THole
   <|> var
   <|> liftC id <$> literal
   <|> parens (expr eqb)
@@ -279,12 +283,12 @@ uncurryLoc ∷ (a → Span → c) → Loc a → c
 uncurryLoc f = \(Loc x s) → f x s
 {-# INLINE uncurryLoc #-}
 
-onCofree ∷ Semigroup a ⇒
-  (Cofree f a → Cofree g a → h (Cofree h a))
-  → Cofree f a → Cofree g a → Cofree h a
-onCofree f = \x@(s :< _) y@(s' :< _) → (s <> s') :< f x y
-{-# INLINE onCofree #-}
+onICofree ∷ Semigroup a ⇒
+  (ICofree a f i → ICofree a g j → h (ICofree a h) k)
+  → ICofree a f i → ICofree a g j → ICofree a h k
+onICofree f = \x@(s :@< _) y@(s' :@< _) → (s <> s') :@< f x y
+{-# INLINE onICofree #-}
 
-liftC ∷ (a → f (Cofree f Span)) → Loc a → Cofree f Span
-liftC f = \(Loc x s) → s :< f x
+liftC ∷ (a → f (ICofree Span f) i) → Loc a → ICofree Span f i
+liftC f = \(Loc x s) → s :@< f x
 {-# INLINE liftC #-}
