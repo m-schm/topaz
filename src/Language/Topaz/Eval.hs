@@ -3,10 +3,10 @@ import Relude
 
 import Language.Topaz.Types.Value
 import Language.Topaz.Types.AST
-import Language.Topaz.Types.Cofree
+import Language.Topaz.Types.Indexed
 
 eval ∷ Env → Expr 'Checked → Value
-eval env (_ :< e) = case e of
+eval env (_ :@< e) = case e of
   Lit l → undefined
   cets :$ cets3 → undefined
   cets :$@ cets3 → undefined

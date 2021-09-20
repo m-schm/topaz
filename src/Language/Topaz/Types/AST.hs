@@ -3,7 +3,6 @@ module Language.Topaz.Types.AST where
 import Relude
 
 import Language.Topaz.Types.Literal
-import Language.Topaz.Types.Cofree
 
 import Control.Lens hiding ((:<))
 import Text.Megaparsec (SourcePos)
@@ -74,9 +73,11 @@ instance (∀ a. c (f a)) ⇒ Forall c f
 -- but newtype wrapper around it is ok
 newtype TupleF s a = TupleF (TTGTupleF s a)
 deriving instance Show (TTGTupleF s a) ⇒ Show (TupleF s a)
+deriving instance Functor (TTGTupleF s) ⇒ Functor (TupleF s)
 
 newtype LamF s a = LamF (TTGLamF s a)
 deriving instance Show (TTGLamF s a) ⇒ Show (LamF s a)
+deriving instance Functor (TTGLamF s) ⇒ Functor (LamF s)
 
 type TTGC ∷ (Type → Constraint) → Stage → (NodeType → Type) → Constraint
 type TTGC c s f =
@@ -115,8 +116,8 @@ data ASTF (s ∷ Stage) (f ∷ NodeType → Type) (i ∷ NodeType) where
   DImport ∷ Import → ASTF s f ('DEC' a)
   DBindFn ∷ f 'BIND → f 'EXP → f 'BLK → TTGArgs s f → ASTF s f ('DEC' a)
   DBind   ∷ f 'PAT → f 'EXP → f 'BLK → ASTF s f ('DEC' a)
-  DRecord ∷ f 'BIND → f 'EXP → f 'BLK → f ('CTOR a) → ASTF s f ('DEC' a)
-  DType   ∷ f 'BIND → f 'EXP → f 'BLK → [f ('CTOR a)] → ASTF s f ('DEC' a)
+  DRecord ∷ f 'BIND → f 'EXP → f ('CTOR a) → ASTF s f ('DEC' a)
+  DType   ∷ f 'BIND → f 'EXP → [f ('CTOR a)] → ASTF s f ('DEC' a)
 
   Ctor  ∷ Scope a → Maybe (f 'BIND) → [f 'FIELD] → ASTF s f ('CTOR a)
   Field ∷ ArgType → Maybe (f 'BIND) → f 'EXP → ASTF s f 'FIELD
