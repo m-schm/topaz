@@ -103,7 +103,7 @@ data ASTF (s ∷ Stage) (f ∷ NodeType → Type) (i ∷ NodeType) where
 
   PVar   ∷ f 'BIND → ASTF s f 'PAT
   PHole  ∷ ASTF s f 'PAT
-  PTup   ∷ TupleF s (f 'EXP) → ASTF s f 'PAT
+  PTup   ∷ TupleF s (f 'PAT) → ASTF s f 'PAT
   PCtor  ∷ TTGIdent s f → [f 'PAT] → ASTF s f 'PAT
   PAnnot ∷ f 'PAT → f 'EXP → ASTF s f 'PAT
   (:@)   ∷ f 'PAT → f 'PAT → ASTF s f 'PAT

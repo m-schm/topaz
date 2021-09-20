@@ -45,12 +45,14 @@ topLevel mp = TopLevel mp
     pub = Loc Global <$> token TPub
 
 block ∷ Parser (S 'BLK)
-block = indented big
+block = joinLoc <$> indented big
     <|> inline
   where
-    big = _
-      <$> many (decl empty <* some (token TNewline))
-      <*> expr AnythingGoes
+    big = do
+      ds ← many (decl @'NotTopLevel empty <* some (token TNewline))
+      e ← expr AnythingGoes
+      pure $ maybe id ((<>) . iextract) (viaNonEmpty head ds) (iextract e)
+        :@< Block ds e
     inline = expr AnythingGoes
       <&> \e → iextract e :@< Block mempty e
 
@@ -64,28 +66,32 @@ decl pub = mutual <|> import_ <|> let_
     mutual = do
       kw ← token TMutual
       Loc ds sp ← braces' $ many (decl pub)
-      pure $ Mutual (kw <> sp) ds
+      pure $ (kw <> sp) :@< Mutual ds
 
     let_ = (pub <|> fmap (Loc Local) (token TLet))
       >>= \h → letVal h <|> letFn h
+
+    letVal, letFn ∷ Loc (Scope a) → Parser (Decl 'Parsed a)
 
     letVal (Loc sc beg) = do
       pat ← try $ pattern1 <* lookAhead (token TColon <|> token TEquals)
       mty ← optional $ token TColon *> expr NoEquals
       eq ← token TEquals
-      let ty = fromMaybe (eq :< Hole) mty
-      b@(Loc _ end) ← block
-      pure $ Decl (beg <> end) sc $ DBind pat ty b
+      let ty = fromMaybe (eq :@< Hole) mty
+      b ← block
+      let span = beg <> iextract b
+      pure $ span :@< Decl sc (span :@< DBind pat ty b)
 
     letFn (Loc sc beg) = do
       i ← ident
       as ← many arg
       mret ← optional $ token TColon *> expr NoEquals
       eq ← token TEquals
-      let ret = fromMaybe (eq :< Hole) mret
-      b@(Loc _ end) ← block
-      pure $ Decl (beg <> end) sc $
-        DBindFn (IdentBind (FixityPrec Nothing Nothing) i) ret b as
+      let ret = fromMaybe (eq :@< Hole) mret
+      b ← block
+      let span = beg <> iextract b
+      let bind = iextract i :@< Bind (FixityPrec Nothing Nothing) i
+      pure $ span :@< Decl sc (span :@< DBindFn bind ret b as)
 
     import_ = do
       (ms, is) ← try $ (,)
@@ -95,23 +101,23 @@ decl pub = mutual <|> import_ <|> let_
 
 arg ∷ Parser (S 'ARG)
 arg = arg' Visible
-  <|> (locSpan <>~) <$> token TAt <*> arg' Implicit
+  <|> (_iextract <>~) <$> token TAt <*> arg' Implicit
   <|> brackets instance_
   where
     arg' t = do
         pat ← pattern1
-        let s = extract pat
-        pure $ Loc (Arg t pat (s :< Hole)) s
+        let s = iextract pat
+        pure $ s :@< Arg t pat (s :@< Hole)
       <|> parens do
         pat ← pattern_
-        ty ← option (extract pat :< Hole) $
+        ty ← option (iextract pat :@< Hole) $
           token TColon *> expr AnythingGoes
-        pure $ Loc (Arg t pat ty) (extract pat <> extract ty)
+        pure $ (iextract pat <> iextract ty) :@< Arg t pat ty
 
     instance_ = do
       pat ← pattern_
       ty ← token TColon *> expr AnythingGoes
-      pure $ Loc (Arg Instance pat ty) (extract ty)
+      pure $ iextract ty :@< Arg Instance pat ty
 
 data ColonBehavior = AnnotsOk | NoAnnots
   deriving Eq
@@ -120,7 +126,7 @@ pattern_ ∷ Parser (Pattern 'Parsed)
 pattern_ = dbg "pattern_" $ label "pattern" do
   p ← pattern'
   optional (token TColon *> expr AnythingGoes)
-    <&> maybe p (onCofree PAnnot p)
+    <&> maybe p (onICofree PAnnot p)
 
 pattern' ∷ Parser (Pattern 'Parsed)
 pattern' = dbg "pattern'" do
@@ -132,15 +138,18 @@ pattern' = dbg "pattern'" do
     <*  token TParenR
   <|> pattern1
   where
-    mkCtor (Loc c s) as = fold1 (s :| fmap extract as) :< PCtor c as
-    mkCtor' (Loc c s) as = (s <> extract (last as)) :< PCtor c (toList as)
-    mkTuple p ps = (extract p <> extract (last ps)) :< PTup (AtLeastTwo p ps)
+    mkCtor (Loc c s) as = fold1 (s :| fmap iextract as) :@< PCtor c as
+    mkCtor' (Loc c s) as = (s <> iextract (last as)) :@< PCtor c (toList as)
+    mkTuple p ps = (iextract p <> iextract (last ps))
+      :@< PTup (TupleF @'Parsed $ p : toList ps)
 
 pattern1 ∷ Parser (Pattern 'Parsed)
-pattern1 = (:< PHole) <$> token THole
+pattern1 = (:@< PHole) <$> token THole
        <|> liftC (flip PCtor []) <$> qident1
-       <|> liftA2 (\fp li@(Loc _ s) → s :< PVar (IdentBind fp li)) fixityPrec ident
+       <|> liftA2 mkBind fixityPrec ident
        <|> parens pattern_
+  where mkBind fp ri = let s = iextract ri
+                       in s :@< (PVar $ s :@< Bind fp ri)
 
 fixityPrec ∷ Parser FixityPrec
 fixityPrec = pure $ FixityPrec Nothing Nothing
@@ -159,8 +168,8 @@ expr' eqb = dbg "expr'" $ when' (eqb /= NoLambda) lam
         <*> token TArrowR'
       let ret = fromMaybe (s :@< Hole) mret
       body ← block
-      pure $ (view (_head . locSpan) as <> iextract body)
-        :@< Lam as ret body
+      pure $ (iextract (head as) <> iextract body)
+        :@< Lam (LamF as) ret body
 
 opExpr ∷ EqualsBehavior → Parser (Expr 'Parsed)
 opExpr eqb = dbg "opExpr" $
@@ -206,7 +215,7 @@ qident1 = qident' $ fmap toList $ pathPart `tryEndBy1` token TPeriod
 qident' ∷ Parser [Loc Text] → Parser (Loc QIdent)
 qident' ppath = do
   path ← ppath
-  Loc name end ← ident
+  end :@< RawIdent name ← ident
   let mp = viaNonEmpty ModulePath $ fmap unLoc path
       beg = path ^? _head . locSpan
   pure $ Loc (QIdent mp name) (maybe id (<>) beg end)
@@ -225,12 +234,13 @@ token t = do
   view locSpan <$> satisfy' (err here) (guard . (== t))
   where err pos = S.singleton $ Tokens [L pos t pos]
 
-ident ∷ Parser (Loc Ident)
+ident ∷ Parser (S 'RAWIDENT)
 ident = satisfy ('i':|"dentifier") \case
-  TVar    v → Just $ Ident v
-  TInfix  v → Just $ Ident v
-  TPrefix v → Just $ Prefix v
-  _         → Nothing
+    TVar    v → Just $ Ident v
+    TInfix  v → Just $ Ident v
+    TPrefix v → Just $ Prefix v
+    _         → Nothing
+  <&> uncurryLoc \i s → s :@< RawIdent i
 
 pathPart ∷ Parser (Loc Text)
 pathPart = satisfy ('i':|"dentifier") \case
@@ -292,3 +302,6 @@ onICofree f = \x@(s :@< _) y@(s' :@< _) → (s <> s') :@< f x y
 liftC ∷ (a → f (ICofree Span f) i) → Loc a → ICofree Span f i
 liftC f = \(Loc x s) → s :@< f x
 {-# INLINE liftC #-}
+
+joinLoc ∷ Loc (S t) → S t
+joinLoc (Loc ic sp) = sp :@< iunwrap ic

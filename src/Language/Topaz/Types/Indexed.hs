@@ -1,5 +1,6 @@
 module Language.Topaz.Types.Indexed where
 import Relude
+import Control.Lens (Lens, Lens')
 
 type IFix ∷ ((k → Type) → k → Type) → k → Type
 newtype IFix f i = IFix (f (IFix f) i)
@@ -17,3 +18,11 @@ deriving instance
   ( Show a
   , ∀ r j. (∀ k. Show (r k)) ⇒ Show (f r j)
   ) ⇒ Show (ICofree a f i)
+
+_iextract ∷ Lens' (ICofree a f i) a
+_iextract f (x :@< xs) = (:@< xs) <$> f x
+
+_iunwrap ∷
+  Lens (ICofree a f i) (ICofree a g i) (f (ICofree a f) i) (g (ICofree a g) i)
+_iunwrap f (x :@< xs) = (x :@<) <$> f xs
+{-# INLINE _iunwrap #-}
